@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+		package="com.drbeef.beefraiderxr"
+		android:versionCode="0"
+		android:versionName="0.0.1" android:installLocation="auto" >
+
+	<!-- Tell the system this app requires OpenGL ES 3.1. -->
+	<uses-feature android:glEsVersion="0x00030002" android:required="true"/>
+
+	<uses-feature android:name="android.hardware.vr.headtracking" android:version="1"
+				  android:required="true" />
+
+
+	<uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+
+	<application android:allowBackup="false" 
+		android:icon="@mipmap/teambeef"
+		android:label="@string/beefraiderxr"
+		android:extractNativeLibs="true"
+		android:requestLegacyExternalStorage="true"	>
+		
+		<meta-data android:name="com.samsung.android.vr.application.mode" android:value="vr_only"/>
+
+		<!-- META QUEST -->
+		<meta-data android:name="com.oculus.supportedDevices" android:value="quest|quest2"/>
+		<meta-data android:name="com.oculus.ossplash" android:value="true"/>
+		<!-- Set Dual Core mode for Quest 2/Pro -->
+		<meta-data android:name="com.oculus.dualcorecpuset" android:value="true" />
+		<!-- Enabling CPU and GPU level trading: -1 = -1 level to gpu, +1 level to cpu -->
+		<!-- CPU needs all the power it can get!! -->
+		<meta-data android:name="com.oculus.trade_cpu_for_gpu_amount" android:value="-1" />
+
+		<!-- PICO XR -->
+		<meta-data android:name="pvr.app.type" android:value="vr" />
+
+		<activity
+				android:name="com.drbeef.beefraiderxr.GLES3JNIActivity"
+				android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+				android:launchMode="singleTask"
+				android:screenOrientation="landscape"
+				android:excludeFromRecents="false"
+				android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity>
+	</application>
+</manifest>

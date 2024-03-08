@@ -1,0 +1,17 @@
+APP_PLATFORM := android-24
+
+APP_CFLAGS += -Wl,--no-undefined
+
+APPLICATIONMK_PATH = $(call my-dir)
+NDK_MODULE_PATH := $(APPLICATIONMK_PATH)/../..
+
+TOP_DIR			:= $(APPLICATIONMK_PATH)
+BEEFRAIDERXR_PATH		:= $(TOP_DIR)/BeefRaiderXR
+OPENLARA_PATH		:= $(TOP_DIR)/OpenLara
+
+APP_ALLOW_MISSING_DEPS=true
+
+APP_MODULES := beefraiderxr
+APP_STL := c++_shared
+
+
