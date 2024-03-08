@@ -977,6 +977,29 @@ struct Lara : Character {
               || state == STATE_STEP_LEFT);
     }
 
+    bool canIKArms() {
+        return    state == STATE_WALK
+                  || state == STATE_RUN
+                  || state == STATE_STOP
+                  || state == STATE_FALL
+                  || state == STATE_FALL_BACK
+                  || state == STATE_SLIDE
+                  || state == STATE_SLIDE_BACK
+                  || state == STATE_BACK_JUMP
+                  || state == STATE_RIGHT_JUMP
+                  || state == STATE_LEFT_JUMP
+                  || state == STATE_UP_JUMP
+                  //|| state == STATE_SWIM
+                  || state == STATE_TREAD
+                  || state == STATE_FAST_BACK
+                  || state == STATE_TURN_RIGHT
+                  || state == STATE_TURN_LEFT
+                  || state == STATE_BACK
+                  || state == STATE_FAST_TURN
+                  || state == STATE_STEP_RIGHT
+                  || state == STATE_STEP_LEFT;
+    }
+
     bool wpnReady() {
         return arms[0].anim != Weapon::Anim::PREPARE && arms[0].anim != Weapon::Anim::UNHOLSTER && arms[0].anim != Weapon::Anim::HOLSTER;
     }
@@ -1048,12 +1071,34 @@ struct Lara : Character {
     }
 
     void wpnFire() {
+        bool armShot[2] = { false, false };
         if (useIKAim) {
-            doShot(Input::joy[0].down[jkA], Input::joy[1].down[jkA]);
+            for (int i = 0; i < 2; i++) {
+                Arm &arm = arms[i];
+                if (arm.anim == Weapon::Anim::FIRE) {
+                    Animation &anim = arm.animation;
+                    //int realFrameIndex = int(arms[i].animation.time * 30.0f / anim->frameRate) % ((anim->frameEnd - anim->frameStart) / anim->frameRate + 1);
+                    if (anim.frameIndex != anim.framePrev) {
+                        if (anim.frameIndex == 0) { //realFrameIndex < arms[i].animation.framePrev) {
+                            armShot[i] = Input::joy[i].down[jkA];
+                        }
+                        // shotgun reload sound
+                        if (wpnCurrent == TR::Entity::SHOTGUN) {
+                            if (anim.frameIndex == 10)
+                                game->playSound(TR::SND_SHOTGUN_RELOAD, pos, Sound::PAN);
+                        }
+                    }
+                }
+                arm.animation.framePrev = arm.animation.frameIndex;
+
+                if (wpnCurrent == TR::Entity::SHOTGUN) break;
+            }
+
+            if (armShot[0] || armShot[1])
+                doShot(armShot[0], armShot[1]);
             return;
         }
 
-        bool armShot[2] = { false, false };
         for (int i = 0; i < 2; i++) {
             Arm &arm = arms[i];
             if (arm.anim == Weapon::Anim::FIRE) {
@@ -1195,7 +1240,8 @@ struct Lara : Character {
             for (int i = 0; i < 2; i++) {
                 Arm &arm = arms[i];
 
-                if (arm.target || ((input & ACTION) && !arm.tracking)) {
+                int action = (input & ACTION) + (Input::joy[i].down[jkA] ? 1 : 0);
+                if (arm.target || (action && !arm.tracking)) {
                     if (arm.anim == Weapon::Anim::HOLD)
                         wpnSetAnim(arm, wpnState, Weapon::Anim::AIM, 0.0f, 1.0f);
                 } else
@@ -1221,6 +1267,8 @@ struct Lara : Character {
         for (int i = 0; i < 2; i++) {
             Arm &arm = arms[i];
 
+            int action = (input & ACTION) + (Input::joy[i].down[jkA] ? 1 : 0);
+
             if (!arm.animation.isEnded) continue;
 
             if (arm.animation.dir >= 0.0f)
@@ -1229,7 +1277,7 @@ struct Lara : Character {
                     case Weapon::Anim::UNHOLSTER : wpnSetAnim(arm, Weapon::IS_ARMED, Weapon::Anim::HOLD, 0.0f, 1.0f, false); break;
                     case Weapon::Anim::AIM       :
                     case Weapon::Anim::FIRE      :
-                        if (input & ACTION)
+                        if (action)
                             wpnSetAnim(arm, Weapon::IS_FIRING, Weapon::Anim::FIRE, arm.animation.time - arm.animation.timeMax, wpnCurrent == TR::Entity::UZIS ? 2.0f : 1.0f);
                         else
                             wpnSetAnim(arm, Weapon::IS_ARMED, Weapon::Anim::AIM, 0.0f, -1.0f, false);
@@ -4029,7 +4077,7 @@ struct Lara : Character {
             solveJointsLeg(JOINT_LEG_R1, JOINT_LEG_R2, JOINT_LEG_R3, footHeightR - LARA_HEEL_HEIGHT);
         }
 
-        if (useIKAim) {
+        if (useIKAim && canIKArms()) {
             solveJointsArm(JOINT_ARM_L1, JOINT_ARM_L2, JOINT_ARM_L3);
             solveJointsArm(JOINT_ARM_R1, JOINT_ARM_R2, JOINT_ARM_R3);
         }
