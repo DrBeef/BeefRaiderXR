@@ -601,7 +601,8 @@ void VR_FrameSetup()
 
     vrPosition = vrPosition.rotateY(-DEG2RAD * vr.snapTurn);
 
-    Input::hmd.head = head;
+    Input::hmd.head = head; // heading direction
+    Input::hmd.body = head; // direction body is facing
     vec3 zero = Input::hmd.zero;
     zero = zero.rotateY(-DEG2RAD * vr.snapTurn);
     Input::hmd.head.setPos(vrPosition - zero);
@@ -619,51 +620,75 @@ void VR_FrameSetup()
     int joyRight = 0;
     int joyLeft = 1;
 
-    //now adjust movement direction based on thumbstick direction
-    vec2 length(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-    //deadzone
-    if (length.length() > 0.2f)
+    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
+
+    // Once we're standing still or we've entered the walking or running state we then move in the direction the user
+    // is pressing the thumbstick like a modern game
+    if (!inventory->active &&
+        inventory->game->getLara() &&
+        (inventory->game->getLara()->state == Lara::STATE_STOP ||
+            inventory->game->getLara()->state == Lara::STATE_RUN ||
+            inventory->game->getLara()->state == Lara::STATE_WALK ||
+            inventory->game->getLara()->state == Lara::STATE_FORWARD_JUMP))
     {
-        mat4 addMat;
-        addMat.identity();
-        if (leftTrackedRemoteState_new.Joystick.y > 0.2f)
+        vec2 length(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+        //deadzone
+        if (length.length() > 0.2f)
         {
+            mat4 addMat;
+            addMat.identity();
             float additionalDirAngle =
                     atan2(leftTrackedRemoteState_new.Joystick.x,
                           leftTrackedRemoteState_new.Joystick.y);
             addMat.rotateY(-additionalDirAngle);
             Input::hmd.head = addMat * Input::hmd.head;
         }
-        else if (leftTrackedRemoteState_new.Joystick.y <= -0.2f)
+        Input::setJoyPos(joyRight, jkL, vec2(0, -length.length()));
+    }
+    // If the user simply pressed the thumbstick in a particular direction that isn't forward
+    // after already executing another move (like jump), then
+    // we'll execute the move for that direction so treat it as a D pad
+    else
+    {
+        //now adjust movement direction based on thumbstick direction
+        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+
+        //deadzone
+        if (joy.length() > 0.2f)
         {
-            float additionalDirAngle =
-                    atan2(leftTrackedRemoteState_new.Joystick.x,
-                          leftTrackedRemoteState_new.Joystick.y) - M_PI;
-            addMat.rotateY(-additionalDirAngle);
-            Input::hmd.head = addMat * Input::hmd.head;
+            //Calculate which quandrant the thumbstick is pushed (UP/RIGHT/DOWN/LEFT) like a D pad
+            float angle = RAD2DEG * atan2f(joy.x, joy.y);
+            if (angle < 0.f) angle += 360.f;
+            int quadrant = (angle + 45.f) / 90.f;
+            angle = quadrant * 90.f;
+            joy.y = cosf(DEG2RAD * angle);
+            joy.x = sinf(DEG2RAD * angle);
         }
-        else // Side Step
-        {
-            Input::setJoyDown(joyLeft, jkLT,  leftTrackedRemoteState_new.Joystick.x < 0.2f ? 1 : 0);
-            Input::setJoyDown(joyLeft, jkRT,  leftTrackedRemoteState_new.Joystick.x > 0.2f ? 1 : 0);
-        }
+
+        Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
     }
 
-    Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
-    //Input::setJoyPos(joyLeft, jkL, vec2(rightTrackedRemoteState_new.Joystick.x, -rightTrackedRemoteState_new.Joystick.y));
-
+    //The only time joyLeft is used is to indicate the firing of the left hand weapon
     Input::setJoyDown(joyLeft, jkA,  leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
     Input::setJoyDown(joyRight, jkA,  rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
 
-    Input::setJoyDown(joyLeft, jkRB, leftTrackedRemoteState_new.GripTrigger > 0.4f ? 1 : 0);
+    //Walk
+    Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+
+    //Unholster weapons
     Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.GripTrigger > 0.4f ? 1 : 0);
 
-    Input::setJoyDown(joyLeft, jkX, leftTrackedRemoteState_new.Buttons & xrButton_X);
+    //Jump
     Input::setJoyDown(joyRight, jkX, rightTrackedRemoteState_new.Buttons & xrButton_A);
 
+    //Roll - Reverse Direction
     Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_B);
 
+    //Menu / Options
     Input::setJoyDown(joyRight, jkSelect, leftTrackedRemoteState_new.Buttons & xrButton_Enter);
+
+    //Start?!
+    Input::setJoyDown(joyRight, jkStart, leftTrackedRemoteState_new.Buttons & xrButton_X);
 
 
     float rotation = -vr_weapon_pitchadjust->value;
