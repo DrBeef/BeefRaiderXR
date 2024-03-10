@@ -9,6 +9,7 @@
 #include <android/native_window_jni.h>	// for native window JNI
 #include <android/input.h>
 #include <cstring>
+#include <string>
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -29,11 +30,13 @@ extern float SS_MULTIPLIER    ;
 
 /* global arg_xxx structs */
 struct arg_dbl *ss;
-struct arg_int *msaa;
+struct arg_lit *cheats;
 struct arg_end *end;
 
 char **argv;
 int argc=0;
+
+bool cheatsEnabled = false;
 
 /*
 ================================================================================
@@ -525,8 +528,21 @@ void * AppThreadFunction(void * parm ) {
 
     sndSetState(true);
 
+    std::string levelName;
+    if (argc > 1)
+    {
+        for (int arg = 1; arg < argc; ++arg)
+        {
+            if (!strstr(argv[arg], "--"))
+            {
+                levelName = argv[arg];
+                break;
+            }
+        }
+    }
+
 	//start
-    Game::init(argc > 1 ? argv[1] : NULL);
+    Game::init(levelName.length() > 0 ? levelName.c_str() : NULL);
 
     //VR_Init();
 
@@ -622,14 +638,25 @@ void VR_FrameSetup()
 
     bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
 
+    int laraState = -1;
+    if (!inventory->active &&
+        inventory->game->getLara())
+    {
+        laraState = inventory->game->getLara()->state;
+    }
+
+    if (laraState == Lara::STATE_SWIM ||
+            laraState == Lara::STATE_TREAD ||
+            laraState == Lara::STATE_GLIDE)
+    {
+        Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
+    }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
     // is pressing the thumbstick like a modern game
-    if (!inventory->active &&
-        inventory->game->getLara() &&
-        (inventory->game->getLara()->state == Lara::STATE_STOP ||
-            inventory->game->getLara()->state == Lara::STATE_RUN ||
-            inventory->game->getLara()->state == Lara::STATE_WALK ||
-            inventory->game->getLara()->state == Lara::STATE_FORWARD_JUMP))
+    else if ((laraState == Lara::STATE_STOP ||
+            laraState == Lara::STATE_RUN ||
+            laraState == Lara::STATE_WALK ||
+            laraState == Lara::STATE_FORWARD_JUMP))
     {
         vec2 length(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
         //deadzone
@@ -675,21 +702,88 @@ void VR_FrameSetup()
     //Walk
     Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
 
-    //Unholster weapons
-    Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.GripTrigger > 0.4f ? 1 : 0);
-
     //Jump
     Input::setJoyDown(joyRight, jkX, rightTrackedRemoteState_new.Buttons & xrButton_A);
 
-    //Roll - Reverse Direction
-    Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_B);
+    //Unholster weapons
+    Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
+
+    //Roll - Reverse Direction - Right thumbstick click
+    Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_RThumb);
 
     //Menu / Options
     Input::setJoyDown(joyRight, jkSelect, leftTrackedRemoteState_new.Buttons & xrButton_Enter);
 
-    //Start?!
-    Input::setJoyDown(joyRight, jkStart, leftTrackedRemoteState_new.Buttons & xrButton_X);
 
+    static bool allowSaveLoad = false;
+    if (!allowSaveLoad)
+    {
+        allowSaveLoad = !((bool)(leftTrackedRemoteState_new.Buttons & (xrButton_X|xrButton_Y)));
+    }
+    else
+    {
+        if (leftTrackedRemoteState_new.Buttons & xrButton_X)
+        {
+            Game::quickSave();
+            allowSaveLoad = false;
+        }
+        else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
+        {
+            Game::quickLoad();
+            allowSaveLoad = false;
+        }
+    }
+
+    if (cheatsEnabled)
+    {
+        //Speed up the game if right thumbrest is touched
+        Input::setDown(ikT, rightTrackedRemoteState_new.Touches & xrButton_ThumbRest);
+
+        if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
+        {
+            vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
+            float angle = RAD2DEG * atan2f(rightJoy.x, rightJoy.y);
+            if (angle < 0.f) angle += 360.f;
+            int quadrant = (angle + 45.f) / 90.f;
+            static bool allowToggleCheat = false;
+            if (!allowToggleCheat)
+            {
+                if (rightJoy.length() < 0.2)
+                {
+                    allowToggleCheat = true;
+                }
+            }
+            else
+            {
+                if (rightJoy.length() > 0.2)
+                {
+                    if (quadrant == 0)
+                    {
+                        inventory->addWeapons();
+                        Game::level->playSound(TR::SND_SCREAM);
+                    }
+                    else if (quadrant == 1)
+                    {
+                        Game::level->loadNextLevel();
+                    }
+                    else if (quadrant == 2)
+                    {
+                        static bool dozy = true;
+                        Lara *lara = (Lara*)Game::level->getLara(0);
+                        if (lara) {
+                            lara->setDozy(dozy);
+                            dozy = !dozy;
+                        }
+                    }
+                    else if (quadrant == 3)
+                    {
+                    }
+
+                    allowToggleCheat = false;
+                }
+            }
+        }
+    }
 
     float rotation = -vr_weapon_pitchadjust->value;
     if (gAppState.controllersPresent == VIVE_CONTROLLERS)
@@ -699,12 +793,12 @@ void VR_FrameSetup()
 
     mat4 controllerPitchAdjustMat;
     controllerPitchAdjustMat.identity();
-    controllerPitchAdjustMat.rotateX(DEG2RAD * rotation);
+    //controllerPitchAdjustMat.rotateX(DEG2RAD * rotation);
 
     vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
                                    rightRemoteTracking_new.GripPose.position.y,
                                    rightRemoteTracking_new.GripPose.position.z);
-    quat vrRightControllerOrientation(rightRemoteTracking_new.Pose.orientation.x,
+    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
                        rightRemoteTracking_new.GripPose.orientation.y,
                        rightRemoteTracking_new.GripPose.orientation.z,
                        rightRemoteTracking_new.GripPose.orientation.w);
@@ -727,7 +821,7 @@ void VR_FrameSetup()
     vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
                                    leftRemoteTracking_new.GripPose.position.y,
                                    leftRemoteTracking_new.GripPose.position.z);
-    quat vrLeftControllerOrientation(leftRemoteTracking_new.Pose.orientation.x,
+    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
                        leftRemoteTracking_new.GripPose.orientation.y,
                        leftRemoteTracking_new.GripPose.orientation.z,
                        leftRemoteTracking_new.GripPose.orientation.w);
@@ -1042,7 +1136,7 @@ JNIEXPORT jlong JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onCreate( JNIEn
 	/* the global arg_xxx structs are initialised within the argtable */
 	void *argtable[] = {
 			ss    = arg_dbl0("s", "supersampling", "<double>", "super sampling value (default: Q1: 1.2, Q2: 1.35)"),
-            msaa  = arg_int0("m", "msaa", "<int>", "MSAA (default: 1)"),
+            cheats = arg_litn(NULL, "cheats", 0, 1, "Whether cheats are enabled"),
             end   = arg_end(20)
 	};
 
@@ -1071,9 +1165,9 @@ JNIEXPORT jlong JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onCreate( JNIEn
             SS_MULTIPLIER = ss->dval[0];
         }
 
-        if (msaa->count > 0 && msaa->ival[0] > 0 && msaa->ival[0] < 10)
+        if (cheats->count > 0)
         {
-            NUM_MULTI_SAMPLES = msaa->ival[0];
+            cheatsEnabled = true;
         }
 	}
 

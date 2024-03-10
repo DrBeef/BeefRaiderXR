@@ -87,8 +87,8 @@ import java.util.Vector;
 
 	}
 
-	private static final String TAG = "BEEFRAIDERXR";
-	private static final String APPLICATION = "BEEFRAIDERXR";
+	private static final String TAG = "BeefRaiderXR";
+	private static final String APPLICATION = "BeefRaiderXR";
 
 
 	private boolean permissionsGranted = false;
@@ -200,68 +200,20 @@ import java.util.Vector;
 
 	public void create() {
 		//Make the directories
-		new File("/sdcard/BEEFRAIDERXR/JK2/base").mkdirs();
-		new File("/sdcard/BEEFRAIDERXR/JK3/base").mkdirs();
+		new File("/sdcard/BeefRaiderXR/JK3/base").mkdirs();
 
 		//Copy the command line params file
-		copy_asset("/sdcard/BEEFRAIDERXR", "commandline.txt", false);
-
-		//Our assets
-		copy_asset("/sdcard/BEEFRAIDERXR/JK2/base", "z_vr_assets_base.pk3", true);
-		copy_asset("/sdcard/BEEFRAIDERXR/JK2/base", "z_vr_assets_jko.pk3", true);
-		copy_asset("/sdcard/BEEFRAIDERXR/JK3/base", "z_vr_assets_base.pk3", true);
-		copy_asset("/sdcard/BEEFRAIDERXR/JK3/base", "z_vr_assets_jka.pk3", true);
-
-		//Bunch of cool mods and their credits - only copy if user wants them
-		if (!new File("/sdcard/BEEFRAIDERXR/JK2/base/no_copy").exists()) {
-			copy_asset("/sdcard/BEEFRAIDERXR/JK2/base", "packaged_mods_credits.txt", false);
-			copy_asset("/sdcard/BEEFRAIDERXR/JK2/base", "GGDynamicWeapons.pk3", false);
-
-			//Weapon Models
-			copy_asset("/sdcard/BEEFRAIDERXR/JK2/base", "z_vr_weapons_jko_Crusty_and_Elin.pk3", true);
-			copy_asset("/sdcard/BEEFRAIDERXR/JK2/base", "assets6_vr_weapons_shaders.pk3", true);
-		}
-
-		//Bunch of cool mods and their credits - only copy if user wants them
-		if (!new File("/sdcard/BEEFRAIDERXR/JK3/base/no_copy").exists()) {
-			copy_asset("/sdcard/BEEFRAIDERXR/JK3/base", "packaged_mods_credits.txt", false);
-			copy_asset("/sdcard/BEEFRAIDERXR/JK3/base", "GGDynamicWeapons.pk3", false);
-			//Weapon Models
-			copy_asset("/sdcard/BEEFRAIDERXR/JK3/base", "z_vr_weapons_jka_Crusty_and_Elin.pk3", true);
-		}
-
-		//Copy mods to the demo folder if demo assets exist, since the demo doesn't seem to be able to load mods from base
-		if (new File("/sdcard/BEEFRAIDERXR/JK2/jk2demo/assets0.pk3").exists() ||
-			new File("/sdcard/BEEFRAIDERXR/JK2/jk2demo/jk2demo/assets0.pk3").exists()) {
-
-			String demoFolder = "/sdcard/BEEFRAIDERXR/JK2/jk2demo";
-			if(new File("/sdcard/BEEFRAIDERXR/JK2/jk2demo/jk2demo/assets0.pk3").exists())
-			{
-				demoFolder = "/sdcard/BEEFRAIDERXR/JK2/jk2demo/jk2demo";
-			}
-
-			//Our assets
-			copy_asset(demoFolder, "z_vr_assets_base.pk3", true);
-			copy_asset(demoFolder, "z_vr_assets_jko.pk3", true);
-
-			//Bunch of cool mods and their credits - only copy if user wants them
-			copy_asset(demoFolder, "packaged_mods_credits.txt", false);
-			copy_asset(demoFolder, "GGDynamicWeapons.pk3", false);
-
-            //Weapon Models
-            copy_asset(demoFolder, "z_vr_weapons_jko_Crusty_and_Elin.pk3", true);
-            copy_asset(demoFolder, "assets6_vr_weapons_shaders.pk3", true);
-		}
+		copy_asset("/sdcard/BeefRaiderXR", "commandline.txt", false);
 
 		//Read these from a file and pass through
-		commandLineParams = new String("jo");
+		commandLineParams = new String("");
 
 		//See if user is trying to use command line params
-		if (new File("/sdcard/BEEFRAIDERXR/commandline.txt").exists()) // should exist!
+		if (new File("/sdcard/BeefRaiderXR/commandline.txt").exists()) // should exist!
 		{
 			BufferedReader br;
 			try {
-				br = new BufferedReader(new FileReader("/sdcard/BEEFRAIDERXR/commandline.txt"));
+				br = new BufferedReader(new FileReader("/sdcard/BeefRaiderXR/commandline.txt"));
 				String s;
 				StringBuilder sb = new StringBuilder(0);
 				while ((s = br.readLine()) != null)
@@ -276,14 +228,6 @@ import java.util.Vector;
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		}
-
-		try {
-			setenv("JK_LIBDIR", getApplicationInfo().nativeLibraryDir, true);
-		}
-		catch (Exception e)
-		{
-
 		}
 
 		for (Pair<String, String> serviceDetail : externalHapticsServiceDetails) {
