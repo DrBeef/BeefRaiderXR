@@ -37,7 +37,8 @@ namespace Input {
     } touch[6];
 
     struct HMD {
-        mat4 head;
+        mat4 head; // heading
+        mat4 body; // body facing direction (set from HMD
         mat4 eye[2];
         mat4 proj[2];
         mat4 controllers[2];

@@ -985,10 +985,10 @@ struct Lara : Character {
                   || state == STATE_FALL_BACK
                   || state == STATE_SLIDE
                   || state == STATE_SLIDE_BACK
-                  || state == STATE_BACK_JUMP
-                  || state == STATE_RIGHT_JUMP
-                  || state == STATE_LEFT_JUMP
-                  || state == STATE_UP_JUMP
+                  //|| state == STATE_BACK_JUMP
+                  //|| state == STATE_RIGHT_JUMP
+                  //|| state == STATE_LEFT_JUMP
+                  //|| state == STATE_UP_JUMP
                   //|| state == STATE_SWIM
                   || state == STATE_TREAD
                   || state == STATE_FAST_BACK
@@ -3242,12 +3242,14 @@ struct Lara : Character {
     // VR control
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR && camera->firstPerson && canFreeRotate()) {
 
-            if (!(input & WALK)) {
+            //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
+            if (!(input & JUMP)) {
                 input &= ~(LEFT | RIGHT);
             }
 
             vec3 ang = getAngleAbs(Input::hmd.head.dir().xyz());
             angle.y = ang.y;
+
             if (stand == STAND_UNDERWATER) {
                 input &= ~(FORTH | BACK);
                 angle.x = ang.x;
@@ -3934,9 +3936,21 @@ struct Lara : Character {
         return mask;
     }
 
+    bool hideHead()
+    {
+        //Not sure about this..
+        if (state == STATE_BACK_JUMP || state == STATE_LEFT_JUMP || state == STATE_RIGHT_JUMP)
+            return false;
+
+        if (Core::pass != Core::passShadow && camera->firstPerson && camera->viewIndex == -1 && game->getCamera() == camera)
+            return true;
+
+        return false;
+    }
+
     virtual void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics) {
         uint32 visMask = visibleMask;
-        if (Core::pass != Core::passShadow && camera->firstPerson && camera->viewIndex == -1 && game->getCamera() == camera) // hide head in first person view // TODO: fix for firstPerson with viewIndex always == -1
+        if (hideHead()) // hide head in first person view // TODO: fix for firstPerson with viewIndex always == -1
             visibleMask &= ~JOINT_MASK_HEAD;
         Controller::render(frustum, mesh, type, caustics);
 
@@ -4060,7 +4074,7 @@ struct Lara : Character {
 
     virtual void updateIK() override {
         if (useIK && canIKLegs()) {
-            float ikPivotOffset = -Input::hmd.head.getPos().y * ONE_METER;
+            float ikPivotOffset = -Input::hmd.body.getPos().y * ONE_METER;
 
             float footHeightL = getFloorHeight(joints[JOINT_LEG_L3].pos);
             float footHeightR = getFloorHeight(joints[JOINT_LEG_R3].pos);

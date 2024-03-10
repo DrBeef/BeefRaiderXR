@@ -781,7 +781,18 @@ struct Controller {
         return getEntity().isActor() ? getJoint(0).pos : pos;
     }
 
+    vec3 getAngleAbs(const vec3 &dir) const {
+        return vec3(-atan2f(dir.y, sqrtf(dir.x * dir.x + dir.z * dir.z)), -atan2f(dir.x, dir.z), 0.0f);
+    }
+
     vec3 getDir() const {
+        if (getEntity().type == TR::Entity::LARA)
+        {
+            //Use body direction for the animated torso
+            vec3 ang = getAngleAbs(Input::hmd.body.dir().xyz());
+            return vec3(ang.x, ang.y);
+        }
+
         return vec3(angle.x, angle.y);
     }
 
@@ -1341,7 +1352,14 @@ struct Controller {
         if (!lockMatrix) {
             matrix.identity();
             matrix.translate(pos);
-            if (angle.y != 0.0f) matrix.rotateY(angle.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+            if (e.type == TR::Entity::LARA)
+            {
+                //Use body direction for the animated torso
+                vec3 ang = getAngleAbs(Input::hmd.body.dir().xyz());
+                if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+            } else {
+                if (angle.y != 0.0f) matrix.rotateY(angle.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+            }
             if (angle.x != 0.0f) matrix.rotateX(angle.x);
             if (angle.z != 0.0f) matrix.rotateZ(angle.z);
         }
