@@ -1127,6 +1127,19 @@ struct Lara : Character {
             doShot(armShot[0], armShot[1]);
     }
 
+    // HACK HACK HACK - Use this to tweak the shot angle - don't know what this is needed!
+    // Without it the shots are way off :-(
+    quat getAdjuectedControllerRot(int i)
+    {
+        mat4 pitchAdjust, yawAdjust;
+        pitchAdjust.identity();
+        yawAdjust.identity();
+        pitchAdjust.rotateX(DEG2RAD * 8);
+        yawAdjust.rotateY(DEG2RAD * (i == 0 ? -3.5f : 3.5f));
+
+        return yawAdjust.getRot() * Input::hmd.controllers[i].getRot() * pitchAdjust.getRot();
+    }
+
     void doShot(bool rightHand, bool leftHand) {
         int *wpnAmmo = game->invCount(wpnCurrent);
 
@@ -1169,7 +1182,7 @@ struct Lara : Character {
             if (useIKAim) {
                 int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R3 : (i ? JOINT_ARM_L3 : JOINT_ARM_R3);
                 p = getJoint(joint).pos;
-                d = getJoint(joint).rot * vec3(0, 1, 0);
+                d = getAdjuectedControllerRot(i) * vec3(0, 1, 0);
                 t = p + d * 15.0f * 1024.0f;
             } else {
                 int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R1 : (i ? JOINT_ARM_L1 : JOINT_ARM_R1);
@@ -1214,6 +1227,9 @@ struct Lara : Character {
     void updateWeapon() {
         if (level->isCutsceneLevel()) return;
 
+        if (health <= 0.0f)
+              return;
+
         if (wpnNext != TR::Entity::NONE && emptyHands()) {
             wpnSet(wpnNext);
             wpnDraw();
@@ -1230,9 +1246,25 @@ struct Lara : Character {
 
         if (!emptyHands()) {
 
-            if (useIK) {
-                //wpnFire(); 
-                //return;
+            if (useIKAim) {
+                for (int i = 0; i < 2; ++i)
+                {
+                    vec3 p, d, t;
+                    int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R3 : (i ? JOINT_ARM_L3
+                                                                                      : JOINT_ARM_R3);
+
+                    p = getJoint(joint).pos;
+                    d = getAdjuectedControllerRot(i) * vec3(0, 1, 0);
+                    t = p + d * 15.0f * 1024.0f;
+
+                    int room;
+                    vec3 hit = trace(getRoomIndex(), p, t, room, false);
+                    hit -= d * 64.0f;
+                    game->addEntity(TR::Entity::BUBBLE, room, hit);
+
+                    if (wpnCurrent == TR::Entity::SHOTGUN)
+                        break;
+                }
             }
 
             bool isRifle = wpnCurrent == TR::Entity::SHOTGUN;

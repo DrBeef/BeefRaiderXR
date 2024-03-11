@@ -381,6 +381,9 @@ void osToggleVR(bool enable) {
 }
 #endif
 
+extern void osStartLevel();
+
+
 #ifdef PROFILE
     struct TimingCPU {
         int &result;

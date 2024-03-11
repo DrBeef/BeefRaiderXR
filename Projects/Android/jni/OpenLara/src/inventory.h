@@ -1956,7 +1956,7 @@ struct Inventory {
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
             if (head.e00 == INF)
-                head = Input::hmd.head.inverseOrtho();
+                head = Input::hmd.body.inverseOrtho();
             Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];
         } else
             head.e00 = INF;

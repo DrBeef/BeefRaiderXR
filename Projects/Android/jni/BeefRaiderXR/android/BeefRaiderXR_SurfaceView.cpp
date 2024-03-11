@@ -71,8 +71,15 @@ bool  osJoyReady(int index)
 void  osJoyVibrate(int index, float L, float R)
 {
     //call the open xr vibration stuff from here
+    TBXR_Vibrate(100, 1, R);
+    TBXR_Vibrate(100, 2, L);
 }
 
+void osStartLevel()
+{
+    //Level reset
+    vr.snapTurn = 0.f;
+}
 
 // sound
 #define          SND_FRAMES 1176
@@ -393,7 +400,7 @@ void VR_Init()
 	srand(time(NULL));
 
 	//Create Cvars
-	vr_turn_mode = Cvar_Get( "vr_turn_mode", "0", CVAR_ARCHIVE); // 0 = snap, 1 = smooth (3rd person only), 2 = smooth (all modes)
+	vr_turn_mode = Cvar_Get( "vr_turn_mode", "0", CVAR_ARCHIVE); // 0 = snap, 1 = smooth
 	vr_turn_angle = Cvar_Get( "vr_turn_angle", "45", CVAR_ARCHIVE);
 	vr_positional_factor = Cvar_Get( "vr_positional_factor", "12", CVAR_ARCHIVE);
     vr_walkdirection = Cvar_Get( "vr_walkdirection", "1", CVAR_ARCHIVE);
@@ -612,12 +619,14 @@ void VR_FrameSetup()
 
     if (Input::hmd.zero.x == INF || forceUpdatePose) {
         Input::hmd.zero = vrPosition;
+        Input::hmd.head = head;
+        Input::hmd.head.setPos(vrPosition);
+
         forceUpdatePose = false;
     }
 
     vrPosition = vrPosition.rotateY(-DEG2RAD * vr.snapTurn);
 
-    Input::hmd.head = head; // heading direction
     Input::hmd.body = head; // direction body is facing
     vec3 zero = Input::hmd.zero;
     zero = zero.rotateY(-DEG2RAD * vr.snapTurn);
@@ -625,214 +634,13 @@ void VR_FrameSetup()
 
     //Left eye
     mat4 vL = head;
-    vL.setPos((Input::hmd.head.getPos() + (Input::hmd.head.right().xyz() * (-0.065f / 2.f))) * ONE_METER);
+    vL.setPos((Input::hmd.head.getPos() + (head.right().xyz() * (-0.065f / 2.f))) * ONE_METER);
 
     //Right eye
     mat4 vR = head;
-    vR.setPos((Input::hmd.head.getPos() + (Input::hmd.head.right().xyz() * (0.065f / 2.f))) * ONE_METER);
+    vR.setPos((Input::hmd.head.getPos() + (head.right().xyz() * (0.065f / 2.f))) * ONE_METER);
 
     Input::hmd.setView(pL, pR, vL, vR);
-
-    int joyRight = 0;
-    int joyLeft = 1;
-
-    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
-
-    int laraState = -1;
-    if (!inventory->active &&
-        inventory->game->getLara())
-    {
-        laraState = inventory->game->getLara()->state;
-    }
-
-    if (laraState == Lara::STATE_SWIM ||
-            laraState == Lara::STATE_TREAD ||
-            laraState == Lara::STATE_GLIDE)
-    {
-        Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
-    }
-    // Once we're standing still or we've entered the walking or running state we then move in the direction the user
-    // is pressing the thumbstick like a modern game
-    else if ((laraState == Lara::STATE_STOP ||
-            laraState == Lara::STATE_RUN ||
-            laraState == Lara::STATE_WALK ||
-            laraState == Lara::STATE_FORWARD_JUMP))
-    {
-        vec2 length(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-        //deadzone
-        if (length.length() > 0.2f)
-        {
-            mat4 addMat;
-            addMat.identity();
-            float additionalDirAngle =
-                    atan2(leftTrackedRemoteState_new.Joystick.x,
-                          leftTrackedRemoteState_new.Joystick.y);
-            addMat.rotateY(-additionalDirAngle);
-            Input::hmd.head = addMat * Input::hmd.head;
-        }
-        Input::setJoyPos(joyRight, jkL, vec2(0, -length.length()));
-    }
-    // If the user simply pressed the thumbstick in a particular direction that isn't forward
-    // after already executing another move (like jump), then
-    // we'll execute the move for that direction so treat it as a D pad
-    else
-    {
-        //now adjust movement direction based on thumbstick direction
-        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-
-        //deadzone
-        if (joy.length() > 0.2f)
-        {
-            //Calculate which quandrant the thumbstick is pushed (UP/RIGHT/DOWN/LEFT) like a D pad
-            float angle = RAD2DEG * atan2f(joy.x, joy.y);
-            if (angle < 0.f) angle += 360.f;
-            int quadrant = (angle + 45.f) / 90.f;
-            angle = quadrant * 90.f;
-            joy.y = cosf(DEG2RAD * angle);
-            joy.x = sinf(DEG2RAD * angle);
-        }
-
-        Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
-    }
-
-    //The only time joyLeft is used is to indicate the firing of the left hand weapon
-    Input::setJoyDown(joyLeft, jkA,  leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
-    Input::setJoyDown(joyRight, jkA,  rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
-
-    //Walk
-    Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
-
-    //Jump
-    Input::setJoyDown(joyRight, jkX, rightTrackedRemoteState_new.Buttons & xrButton_A);
-
-    //Unholster weapons
-    Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
-
-    //Roll - Reverse Direction - Right thumbstick click
-    Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_RThumb);
-
-    //Menu / Options
-    Input::setJoyDown(joyRight, jkSelect, leftTrackedRemoteState_new.Buttons & xrButton_Enter);
-
-
-    static bool allowSaveLoad = false;
-    if (!allowSaveLoad)
-    {
-        allowSaveLoad = !((bool)(leftTrackedRemoteState_new.Buttons & (xrButton_X|xrButton_Y)));
-    }
-    else
-    {
-        if (leftTrackedRemoteState_new.Buttons & xrButton_X)
-        {
-            Game::quickSave();
-            allowSaveLoad = false;
-        }
-        else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
-        {
-            Game::quickLoad();
-            allowSaveLoad = false;
-        }
-    }
-
-    if (cheatsEnabled)
-    {
-        //Speed up the game if right thumbrest is touched
-        Input::setDown(ikT, rightTrackedRemoteState_new.Touches & xrButton_ThumbRest);
-
-        if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
-        {
-            vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
-            float angle = RAD2DEG * atan2f(rightJoy.x, rightJoy.y);
-            if (angle < 0.f) angle += 360.f;
-            int quadrant = (angle + 45.f) / 90.f;
-            static bool allowToggleCheat = false;
-            if (!allowToggleCheat)
-            {
-                if (rightJoy.length() < 0.2)
-                {
-                    allowToggleCheat = true;
-                }
-            }
-            else
-            {
-                if (rightJoy.length() > 0.2)
-                {
-                    if (quadrant == 0)
-                    {
-                        inventory->addWeapons();
-                        Game::level->playSound(TR::SND_SCREAM);
-                    }
-                    else if (quadrant == 1)
-                    {
-                        Game::level->loadNextLevel();
-                    }
-                    else if (quadrant == 2)
-                    {
-                        static bool dozy = true;
-                        Lara *lara = (Lara*)Game::level->getLara(0);
-                        if (lara) {
-                            lara->setDozy(dozy);
-                            dozy = !dozy;
-                        }
-                    }
-                    else if (quadrant == 3)
-                    {
-                    }
-
-                    allowToggleCheat = false;
-                }
-            }
-        }
-    }
-
-    float rotation = -vr_weapon_pitchadjust->value;
-    if (gAppState.controllersPresent == VIVE_CONTROLLERS)
-    {
-        rotation += -33.6718750f;
-    }
-
-    mat4 controllerPitchAdjustMat;
-    controllerPitchAdjustMat.identity();
-    //controllerPitchAdjustMat.rotateX(DEG2RAD * rotation);
-
-    vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
-                                   rightRemoteTracking_new.GripPose.position.y,
-                                   rightRemoteTracking_new.GripPose.position.z);
-    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
-                       rightRemoteTracking_new.GripPose.orientation.y,
-                       rightRemoteTracking_new.GripPose.orientation.z,
-                       rightRemoteTracking_new.GripPose.orientation.w);
-
-    vrRightControllerPosition = vrRightControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
-
-    mat4 cR = snapTurnMat * controllerPitchAdjustMat * mat4(vrRightControllerOrientation, vec3(0));
-    cR.setPos((vrRightControllerPosition - zero) * ONE_METER);
-
-    //I don't know what this does but it is necessary for some reason!
-    mat4 scaleBasis(
-            1,  0,  0, 0,
-            0, -1,  0, 0,
-            0,  0, -1, 0,
-            0,  0,  0, 1);
-
-    cR = scaleBasis * cR * scaleBasis.inverse();
-    Input::hmd.controllers[0] = cR;
-
-    vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
-                                   leftRemoteTracking_new.GripPose.position.y,
-                                   leftRemoteTracking_new.GripPose.position.z);
-    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
-                       leftRemoteTracking_new.GripPose.orientation.y,
-                       leftRemoteTracking_new.GripPose.orientation.z,
-                       leftRemoteTracking_new.GripPose.orientation.w);
-
-    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
-
-    mat4 cL = snapTurnMat * controllerPitchAdjustMat * mat4(vrLeftControllerOrientation, vec3(0));
-    cL.setPos((vrLeftControllerPosition - zero) * ONE_METER);
-
-    cL = scaleBasis * cL * scaleBasis.inverse();
-    Input::hmd.controllers[1] = cL;
 }
 
 extern "C" {
@@ -981,20 +789,324 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 void VR_HandleControllerInput() {
 	TBXR_UpdateControllers();
 
-	//Call additional control schemes here
-	switch (vr_control_scheme->integer)
-	{
-		case RIGHT_HANDED_DEFAULT:
-			HandleInput_Default(&rightTrackedRemoteState_new, &rightTrackedRemoteState_old, &rightRemoteTracking_new,
-								&leftTrackedRemoteState_new, &leftTrackedRemoteState_old, &leftRemoteTracking_new,
-								xrButton_A, xrButton_B, xrButton_X, xrButton_Y);
-			break;
-		case LEFT_HANDED_DEFAULT:
-			HandleInput_Default(&leftTrackedRemoteState_new, &leftTrackedRemoteState_old, &leftRemoteTracking_new,
-								&rightTrackedRemoteState_new, &rightTrackedRemoteState_old, &rightRemoteTracking_new,
-								xrButton_X, xrButton_Y, xrButton_A, xrButton_B);
-			break;
-	}
+    bool usingSnapTurn = vr_turn_mode->integer == 0;
+
+
+    if (!inventory->isActive())
+    {
+        static int increaseSnap = true;
+        if (!vr.item_selector)
+        {
+            if (usingSnapTurn)
+            {
+                if (rightTrackedRemoteState_new.Joystick.x > 0.7f)
+                {
+                    if (increaseSnap)
+                    {
+                        vr.snapTurn -= vr_turn_angle->value;
+                        increaseSnap = false;
+                        if (vr.snapTurn < -180.0f)
+                        {
+                            vr.snapTurn += 360.f;
+                        }
+                    }
+                }
+                else if (rightTrackedRemoteState_new.Joystick.x < 0.3f)
+                {
+                    increaseSnap = true;
+                }
+            }
+
+            static int decreaseSnap = true;
+            if (usingSnapTurn)
+            {
+                if (rightTrackedRemoteState_new.Joystick.x < -0.7f)
+                {
+                    if (decreaseSnap)
+                    {
+                        vr.snapTurn += vr_turn_angle->value;
+                        decreaseSnap = false;
+
+                        if (vr.snapTurn > 180.0f)
+                        {
+                            vr.snapTurn -= 360.f;
+                        }
+                    }
+                }
+                else if (rightTrackedRemoteState_new.Joystick.x > -0.3f)
+                {
+                    decreaseSnap = true;
+                }
+            }
+
+            if (!usingSnapTurn && fabs(rightTrackedRemoteState_new.Joystick.x) > 0.1f) //smooth turn
+            {
+                vr.snapTurn -= ((vr_turn_angle->value / 10.0f) *
+                                rightTrackedRemoteState_new.Joystick.x);
+                if (vr.snapTurn > 180.0f)
+                {
+                    vr.snapTurn -= 360.f;
+                }
+            }
+        }
+        else
+        {
+            if (fabs(rightTrackedRemoteState_new.Joystick.x) > 0.5f)
+            {
+                increaseSnap = false;
+            }
+            else
+            {
+                increaseSnap = true;
+            }
+        }
+    }
+
+    int joyRight = 0;
+    int joyLeft = 1;
+
+    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
+
+    int laraState = -1;
+    if (!inventory->isActive() &&
+        inventory->game->getLara())
+    {
+        laraState = inventory->game->getLara()->state;
+    }
+
+    if (laraState == Lara::STATE_SWIM ||
+        laraState == Lara::STATE_TREAD ||
+        laraState == Lara::STATE_GLIDE)
+    {
+        Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
+        Input::hmd.head = Input::hmd.body;
+    }
+        // Once we're standing still or we've entered the walking or running state we then move in the direction the user
+        // is pressing the thumbstick like a modern game
+    else if ((laraState == Lara::STATE_STOP ||
+              laraState == Lara::STATE_RUN ||
+              laraState == Lara::STATE_WALK ||
+              laraState == Lara::STATE_FORWARD_JUMP))
+    {
+        vec2 length(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+        //deadzone
+        if (length.length() > 0.2f)
+        {
+            mat4 addMat;
+            addMat.identity();
+            float additionalDirAngle =
+                    atan2(leftTrackedRemoteState_new.Joystick.x,
+                          leftTrackedRemoteState_new.Joystick.y);
+            addMat.rotateY(-additionalDirAngle);
+            Input::hmd.head = addMat * Input::hmd.body;
+        }
+        Input::setJoyPos(joyRight, jkL, vec2(0, -length.length()));
+    }
+    // If the user simply pressed the thumbstick in a particular direction that isn't forward
+    // after already executing another move (like jump), then
+    // we'll execute the move for that direction so treat it as a D pad
+    else
+    {
+        //now adjust movement direction based on thumbstick direction
+        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+
+        //deadzone
+        if (joy.length() > 0.2f)
+        {
+            //Calculate which quandrant the thumbstick is pushed (UP/RIGHT/DOWN/LEFT) like a D pad
+            float angle = RAD2DEG * atan2f(joy.x, joy.y);
+            if (angle < 0.f) angle += 360.f;
+            int quadrant = (angle + 45.f) / 90.f;
+            angle = quadrant * 90.f;
+            joy.y = cosf(DEG2RAD * angle);
+            joy.x = sinf(DEG2RAD * angle);
+
+            Input::hmd.head = Input::hmd.body;
+        }
+
+        Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
+    }
+
+    if (laraState == Lara::STATE_STOP)
+    {
+        Input::hmd.head = Input::hmd.body;
+    }
+
+    /*
+    static bool toggled = false;
+    if (toggled)
+    {
+        Input::setJoyDown(joyRight, jkSelect, false);
+        toggled = false;
+    }
+    else if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
+             rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
+            (inventory->isActive() && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
+             rightTrackedRemoteState_old.GripTrigger > 0.4f))
+    {
+        Input::setJoyDown(joyRight, jkSelect, true);
+        toggled = true;
+    }
+    */
+
+    //The only time joyLeft is used is to indicate the firing of the left hand weapon
+    Input::setJoyDown(joyLeft, jkA,  leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+    Input::setJoyDown(joyRight, jkA,  rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+
+    //Walk
+    Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+
+    //Jump
+    Input::setJoyDown(joyRight, jkX, rightTrackedRemoteState_new.Buttons & xrButton_A);
+
+    //Unholster weapons
+    Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
+
+    //Roll - Reverse Direction - Right thumbstick click
+    Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_RThumb);
+
+    //if (!toggled)
+    {
+        //Menu / Options
+        Input::setJoyDown(joyRight, jkSelect, leftTrackedRemoteState_new.Buttons & xrButton_Enter);
+    }
+
+
+    static bool allowSaveLoad = false;
+    if (!allowSaveLoad)
+    {
+        allowSaveLoad = !((bool)(leftTrackedRemoteState_new.Buttons & (xrButton_X|xrButton_Y)));
+    }
+    else
+    {
+        if (leftTrackedRemoteState_new.Buttons & xrButton_X)
+        {
+            Game::quickSave();
+            allowSaveLoad = false;
+        }
+        else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
+        {
+            Game::quickLoad();
+            allowSaveLoad = false;
+        }
+    }
+
+    if (cheatsEnabled)
+    {
+        //Toggle speed up the game if right thumbrest is touched
+        static bool fast = false;
+        Input::setDown(ikT, fast);
+        if ((rightTrackedRemoteState_new.Touches & xrButton_ThumbRest) && !(rightTrackedRemoteState_old.Touches & xrButton_ThumbRest))
+        {
+            fast = !fast;
+        }
+
+        if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
+        {
+            vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
+            float angle = RAD2DEG * atan2f(rightJoy.x, rightJoy.y);
+            if (angle < 0.f) angle += 360.f;
+            int quadrant = (angle + 45.f) / 90.f;
+            static bool allowToggleCheat = false;
+            if (!allowToggleCheat)
+            {
+                if (rightJoy.length() < 0.2)
+                {
+                    allowToggleCheat = true;
+                }
+            }
+            else
+            {
+                if (rightJoy.length() > 0.2)
+                {
+                    if (quadrant == 0)
+                    {
+                        inventory->addWeapons();
+                        Game::level->playSound(TR::SND_SCREAM);
+                    }
+                    else if (quadrant == 1)
+                    {
+                        Game::level->loadNextLevel();
+                    }
+                    else if (quadrant == 2)
+                    {
+                        static bool dozy = true;
+                        Lara *lara = (Lara*)Game::level->getLara(0);
+                        if (lara) {
+                            lara->setDozy(dozy);
+                            dozy = !dozy;
+                        }
+                    }
+                    else if (quadrant == 3)
+                    {
+                    }
+
+                    allowToggleCheat = false;
+                }
+            }
+        }
+    }
+
+    float rotation = -vr_weapon_pitchadjust->value;
+    if (gAppState.controllersPresent == VIVE_CONTROLLERS)
+    {
+        rotation += -33.6718750f;
+    }
+
+    mat4 controllerPitchAdjustMat;
+    controllerPitchAdjustMat.identity();
+    //controllerPitchAdjustMat.rotateX(DEG2RAD * rotation);
+
+    vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
+                                   rightRemoteTracking_new.GripPose.position.y,
+                                   rightRemoteTracking_new.GripPose.position.z);
+    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
+                                      rightRemoteTracking_new.GripPose.orientation.y,
+                                      rightRemoteTracking_new.GripPose.orientation.z,
+                                      rightRemoteTracking_new.GripPose.orientation.w);
+
+    vrRightControllerPosition = vrRightControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
+
+    mat4 snapTurnMat;
+    snapTurnMat.identity();
+    snapTurnMat.rotateY(DEG2RAD * vr.snapTurn);
+    vec3 zero = Input::hmd.zero;
+    zero = zero.rotateY(-DEG2RAD * vr.snapTurn);
+
+    mat4 cR = snapTurnMat * controllerPitchAdjustMat * mat4(vrRightControllerOrientation, vec3(0));
+    cR.setPos((vrRightControllerPosition - zero) * ONE_METER);
+
+    //I don't know what this does but it is necessary for some reason!
+    mat4 scaleBasis(
+            1,  0,  0, 0,
+            0, -1,  0, 0,
+            0,  0, -1, 0,
+            0,  0,  0, 1);
+
+    cR = scaleBasis * cR * scaleBasis.inverse();
+    Input::hmd.controllers[0] = cR;
+
+    vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
+                                  leftRemoteTracking_new.GripPose.position.y,
+                                  leftRemoteTracking_new.GripPose.position.z);
+    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
+                                     leftRemoteTracking_new.GripPose.orientation.y,
+                                     leftRemoteTracking_new.GripPose.orientation.z,
+                                     leftRemoteTracking_new.GripPose.orientation.w);
+
+    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
+
+    mat4 cL = snapTurnMat * controllerPitchAdjustMat * mat4(vrLeftControllerOrientation, vec3(0));
+    cL.setPos((vrLeftControllerPosition - zero) * ONE_METER);
+
+    cL = scaleBasis * cL * scaleBasis.inverse();
+    Input::hmd.controllers[1] = cL;
+
+
+
+    //keep old state
+    rightTrackedRemoteState_old = rightTrackedRemoteState_new;
+    leftTrackedRemoteState_old = leftTrackedRemoteState_new;
 }
 
 /*
