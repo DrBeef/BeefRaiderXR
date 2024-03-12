@@ -276,9 +276,11 @@ namespace Core {
 #define SETTINGS_READING 0xFF
 
     struct Settings {
-        enum Quality  { LOW, MEDIUM, HIGH };
-        enum Stereo   { STEREO_OFF, STEREO_SBS, STEREO_ANAGLYPH, STEREO_SPLIT, STEREO_VR };
-        enum Scale    { SCALE_25, SCALE_50, SCALE_75, SCALE_100 };
+        enum Quality   { LOW, MEDIUM, HIGH };
+        enum Stereo    { STEREO_OFF, STEREO_SBS, STEREO_ANAGLYPH, STEREO_SPLIT, STEREO_VR };
+        enum Scale     { SCALE_25, SCALE_50, SCALE_75, SCALE_100 };
+        enum Handedness{ RIGHT_HANDED, LEFT_HANDED };
+        enum TurnMode  { SNAP_TURN, SMOOTH_TURN_SLOW, SMOOTH_TURN_FAST };
 
         uint8 version;
 
@@ -296,6 +298,8 @@ namespace Core {
             uint8 scale;
             uint8 vsync;
             uint8 stereo;
+            uint8 handedness;
+            uint8 turnmode;
             void setFilter(Quality value) {
                 if (value > MEDIUM && !(support.maxAniso > 1))
                     value = MEDIUM;
@@ -872,7 +876,7 @@ namespace Core {
         settings.detail.setWater    (Core::Settings::HIGH);
         settings.detail.simple       = false;
         settings.detail.vsync        = true;
-        settings.detail.stereo       = Settings::STEREO_OFF;
+        settings.detail.stereo       = Settings::STEREO_VR;
         settings.detail.scale        = Settings::SCALE_100;
         settings.audio.music         = SND_MAX_VOLUME;
         settings.audio.sound         = SND_MAX_VOLUME;

@@ -37,6 +37,7 @@ char **argv;
 int argc=0;
 
 bool cheatsEnabled = false;
+bool isDemo = false;
 
 /*
 ================================================================================
@@ -70,9 +71,11 @@ bool  osJoyReady(int index)
 
 void  osJoyVibrate(int index, float L, float R)
 {
-    //call the open xr vibration stuff from here
-    TBXR_Vibrate(100, 1, R);
-    TBXR_Vibrate(100, 2, L);
+    if (R > 0.f)
+        TBXR_Vibrate(100, 1, R);
+
+    if (L > 0.f)
+        TBXR_Vibrate(100, 2, L);
 }
 
 void osStartLevel()
@@ -527,16 +530,24 @@ void * AppThreadFunction(void * parm ) {
 	TBXR_InitRenderer();
 	TBXR_InitActions();
 
-    chdir("/sdcard/BeefRaiderXR");
+    TBXR_WaitForSessionActive();
 
-	TBXR_WaitForSessionActive();
+    std::string levelName;
+    if (isDemo)
+    {
+        chdir("/sdcard/BeefRaiderXR/DATA");
+        levelName = "LEVEL2.PHD";
+    }
+    else
+    {
+        chdir("/sdcard/BeefRaiderXR");
+    }
 
     osStartTime = Core::getTime();
 
     sndSetState(true);
 
-    std::string levelName;
-    if (argc > 1)
+    if (argc > 1 && !isDemo)
     {
         for (int arg = 1; arg < argc; ++arg)
         {
@@ -550,8 +561,6 @@ void * AppThreadFunction(void * parm ) {
 
 	//start
     Game::init(levelName.length() > 0 ? levelName.c_str() : NULL);
-
-    //VR_Init();
 
     while (!Core::isQuit) {
         {
@@ -789,13 +798,12 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 void VR_HandleControllerInput() {
 	TBXR_UpdateControllers();
 
-    bool usingSnapTurn = vr_turn_mode->integer == 0;
+    bool usingSnapTurn = Core::settings.detail.turnmode == 0;
 
 
     if (!inventory->isActive())
     {
         static int increaseSnap = true;
-        if (!vr.item_selector)
         {
             if (usingSnapTurn)
             {
@@ -841,23 +849,12 @@ void VR_HandleControllerInput() {
 
             if (!usingSnapTurn && fabs(rightTrackedRemoteState_new.Joystick.x) > 0.1f) //smooth turn
             {
-                vr.snapTurn -= ((vr_turn_angle->value / 10.0f) *
+                vr.snapTurn -= (Core::settings.detail.turnmode *
                                 rightTrackedRemoteState_new.Joystick.x);
                 if (vr.snapTurn > 180.0f)
                 {
                     vr.snapTurn -= 360.f;
                 }
-            }
-        }
-        else
-        {
-            if (fabs(rightTrackedRemoteState_new.Joystick.x) > 0.5f)
-            {
-                increaseSnap = false;
-            }
-            else
-            {
-                increaseSnap = true;
             }
         }
     }
@@ -878,29 +875,30 @@ void VR_HandleControllerInput() {
         laraState == Lara::STATE_TREAD ||
         laraState == Lara::STATE_GLIDE)
     {
-        Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
+        Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
         Input::hmd.head = Input::hmd.body;
     }
-        // Once we're standing still or we've entered the walking or running state we then move in the direction the user
-        // is pressing the thumbstick like a modern game
+    // Once we're standing still or we've entered the walking or running state we then move in the direction the user
+    // is pressing the thumbstick like a modern game
     else if ((laraState == Lara::STATE_STOP ||
               laraState == Lara::STATE_RUN ||
               laraState == Lara::STATE_WALK ||
               laraState == Lara::STATE_FORWARD_JUMP))
     {
-        vec2 length(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
         //deadzone
-        if (length.length() > 0.2f)
+        if (joy.length() > 0.2f)
         {
             mat4 addMat;
             addMat.identity();
             float additionalDirAngle =
-                    atan2(leftTrackedRemoteState_new.Joystick.x,
-                          leftTrackedRemoteState_new.Joystick.y);
+                    atan2(joy.x,
+                          joy.y);
             addMat.rotateY(-additionalDirAngle);
             Input::hmd.head = addMat * Input::hmd.body;
         }
-        Input::setJoyPos(joyRight, jkL, vec2(0, -length.length()));
+
+        Input::setJoyPos(joyRight, jkL, vec2(0, -joy.length()));
     }
     // If the user simply pressed the thumbstick in a particular direction that isn't forward
     // after already executing another move (like jump), then
@@ -914,10 +912,7 @@ void VR_HandleControllerInput() {
         if (joy.length() > 0.2f)
         {
             //Calculate which quandrant the thumbstick is pushed (UP/RIGHT/DOWN/LEFT) like a D pad
-            float angle = RAD2DEG * atan2f(joy.x, joy.y);
-            if (angle < 0.f) angle += 360.f;
-            int quadrant = (angle + 45.f) / 90.f;
-            angle = quadrant * 90.f;
+            float angle = joy.quadrant() * 90.f;
             joy.y = cosf(DEG2RAD * angle);
             joy.x = sinf(DEG2RAD * angle);
 
@@ -965,12 +960,16 @@ void VR_HandleControllerInput() {
     //Roll - Reverse Direction - Right thumbstick click
     Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_RThumb);
 
-    //if (!toggled)
-    {
-        //Menu / Options
-        Input::setJoyDown(joyRight, jkSelect, leftTrackedRemoteState_new.Buttons & xrButton_Enter);
-    }
+    //Menu / Options
+    Input::setJoyDown(joyRight, jkSelect, leftTrackedRemoteState_new.Buttons & xrButton_Enter);
 
+    //Inventory controls
+    if (inventory->isActive())
+    {
+        Input::setJoyPos(joyRight, jkL, vec2((leftTrackedRemoteState_new.Joystick.x + rightTrackedRemoteState_new.Joystick.x), -(leftTrackedRemoteState_new.Joystick.y + rightTrackedRemoteState_new.Joystick.y)));
+        Input::setJoyDown(joyRight, jkA, (rightTrackedRemoteState_new.Buttons & xrButton_A) | (leftTrackedRemoteState_new.Buttons & xrButton_X));
+        Input::setJoyDown(joyRight, jkSelect, (rightTrackedRemoteState_new.Buttons & xrButton_B) | (leftTrackedRemoteState_new.Buttons & xrButton_Y) | (leftTrackedRemoteState_new.Buttons & xrButton_Enter));
+    }
 
     static bool allowSaveLoad = false;
     if (!allowSaveLoad)
@@ -1004,9 +1003,7 @@ void VR_HandleControllerInput() {
         if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
         {
             vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
-            float angle = RAD2DEG * atan2f(rightJoy.x, rightJoy.y);
-            if (angle < 0.f) angle += 360.f;
-            int quadrant = (angle + 45.f) / 90.f;
+            int quadrant = rightJoy.quadrant();
             static bool allowToggleCheat = false;
             if (!allowToggleCheat)
             {
@@ -1241,7 +1238,7 @@ int JNI_OnLoad(JavaVM* vm, void* reserved)
 }
 
 JNIEXPORT jlong JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onCreate( JNIEnv * env, jclass activityClass, jobject activity,
-																	   jstring commandLineParams)
+																	   jstring commandLineParams, jboolean demo)
 {
 	ALOGV( "    GLES3JNILib::onCreate()" );
 
@@ -1283,6 +1280,7 @@ JNIEXPORT jlong JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onCreate( JNIEn
         }
 	}
 
+    isDemo = demo;
 
 	ovrAppThread * appThread = (ovrAppThread *) malloc( sizeof( ovrAppThread ) );
 	ovrAppThread_Create( appThread, env, activity, activityClass );

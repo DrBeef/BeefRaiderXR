@@ -200,13 +200,28 @@ import java.util.Vector;
 
 	public void create() {
 		//Make the directories
-		new File("/sdcard/BeefRaiderXR/JK3/base").mkdirs();
+		new File("/sdcard/BeefRaiderXR/DATA").mkdirs();
 
 		//Copy the command line params file
 		copy_asset("/sdcard/BeefRaiderXR", "commandline.txt", false);
 
+		//Copy demo files
+		copy_asset("/sdcard/BeefRaiderXR/DATA", "INSTALL.PCX", false);
+		copy_asset("/sdcard/BeefRaiderXR/DATA", "LEVEL2.PHD", false);
+		copy_asset("/sdcard/BeefRaiderXR/DATA", "TITLE.PHD", false);
+		copy_asset("/sdcard/BeefRaiderXR/DATA", "TITLEH.PCX", false);
+
 		//Read these from a file and pass through
 		commandLineParams = new String("");
+		boolean isDemo = false;
+
+		//If there's no level 1 file, then use the demo assets
+		if (!new File("/sdcard/BeefRaiderXR/DATA/LEVEL1.PHD").exists())
+		{
+			//The demo command line
+			commandLineParams = "LEVEL2.PHD";
+			isDemo = true;
+		}
 
 		//See if user is trying to use command line params
 		if (new File("/sdcard/BeefRaiderXR/commandline.txt").exists()) // should exist!
@@ -220,7 +235,7 @@ import java.util.Vector;
 					sb.append(s + " ");
 				br.close();
 
-				commandLineParams = new String(sb.toString());
+				commandLineParams += sb.toString();
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -229,6 +244,7 @@ import java.util.Vector;
 				e.printStackTrace();
 			}
 		}
+
 
 		for (Pair<String, String> serviceDetail : externalHapticsServiceDetails) {
 			HapticServiceClient client = new HapticServiceClient(this, (state, desc) -> {
@@ -240,7 +256,7 @@ import java.util.Vector;
 			externalHapticsServiceClients.add(client);
 		}
 
-		mNativeHandle = GLES3JNILib.onCreate( this, commandLineParams );
+		mNativeHandle = GLES3JNILib.onCreate( this, commandLineParams, isDemo );
 	}
 
 	public void copy_asset_with_rename(String path, String name, String name_out, boolean force) {

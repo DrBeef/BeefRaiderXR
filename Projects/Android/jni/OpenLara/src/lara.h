@@ -1080,8 +1080,12 @@ struct Lara : Character {
                     //int realFrameIndex = int(arms[i].animation.time * 30.0f / anim->frameRate) % ((anim->frameEnd - anim->frameStart) / anim->frameRate + 1);
                     if (anim.frameIndex != anim.framePrev) {
                         if (anim.frameIndex == 0) { //realFrameIndex < arms[i].animation.framePrev) {
-                            armShot[i] = Input::joy[i].down[jkA];
+                            if (Input::joy[i].down[jkA])
+                                armShot[i] = true;
+                            else
+                                wpnSetAnim(arm, Weapon::IS_ARMED, Weapon::Anim::AIM, 0.0f, -1.0f, arm.target == NULL);
                         }
+
                         // shotgun reload sound
                         if (wpnCurrent == TR::Entity::SHOTGUN) {
                             if (anim.frameIndex == 10)
@@ -1129,7 +1133,7 @@ struct Lara : Character {
 
     // HACK HACK HACK - Use this to tweak the shot angle - don't know what this is needed!
     // Without it the shots are way off :-(
-    quat getAdjuectedControllerRot(int i)
+    quat getAdjustedControllerRot(int i)
     {
         mat4 pitchAdjust, yawAdjust;
         pitchAdjust.identity();
@@ -1182,8 +1186,9 @@ struct Lara : Character {
             if (useIKAim) {
                 int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R3 : (i ? JOINT_ARM_L3 : JOINT_ARM_R3);
                 p = getJoint(joint).pos;
-                d = getAdjuectedControllerRot(i) * vec3(0, 1, 0);
-                t = p + d * 15.0f * 1024.0f;
+                d = getAdjustedControllerRot(i) * vec3(0, 1, 0);
+#define VR_BULLET_DISTANCE_MULTIPLIER   2.0f
+                t = p + d * 15.0f * 1024.0f * VR_BULLET_DISTANCE_MULTIPLIER;
             } else {
                 int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R1 : (i ? JOINT_ARM_L1 : JOINT_ARM_R1);
                 p = getJoint(joint).pos;
@@ -1216,6 +1221,9 @@ struct Lara : Character {
             saveStats.ammoUsed += ((wpnCurrent == TR::Entity::SHOTGUN) ? 1 : 2);
 
             game->playSound(wpnGetSound(), pos, Sound::PAN);
+
+            Input::setJoyVibration(0, leftHand ? 0.8f : 0.f, rightHand ? 0.8f : 0.f);
+
             if (shots != hits)
                 game->playSound(TR::SND_RICOCHET, nearPos, Sound::PAN);
 
@@ -1250,17 +1258,17 @@ struct Lara : Character {
                 for (int i = 0; i < 2; ++i)
                 {
                     vec3 p, d, t;
-                    int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R3 : (i ? JOINT_ARM_L3
-                                                                                      : JOINT_ARM_R3);
+                    int joint = wpnCurrent == TR::Entity::SHOTGUN ? (Core::settings.detail.handedness ? JOINT_ARM_R3: JOINT_ARM_L3) :
+                            (i ? JOINT_ARM_L3 : JOINT_ARM_R3);
 
                     p = getJoint(joint).pos;
-                    d = getAdjuectedControllerRot(i) * vec3(0, 1, 0);
+                    d = getAdjustedControllerRot(i) * vec3(0, 1, 0);
                     t = p + d * 15.0f * 1024.0f;
 
                     int room;
                     vec3 hit = trace(getRoomIndex(), p, t, room, false);
                     hit -= d * 64.0f;
-                    game->addEntity(TR::Entity::BUBBLE, room, hit);
+                    //game->addEntity(TR::Entity::BUBBLE, room, hit);
 
                     if (wpnCurrent == TR::Entity::SHOTGUN)
                         break;
@@ -1270,15 +1278,27 @@ struct Lara : Character {
             bool isRifle = wpnCurrent == TR::Entity::SHOTGUN;
 
             for (int i = 0; i < 2; i++) {
+                if (isRifle && Core::settings.detail.handedness == 1)
+                    continue;
+
                 Arm &arm = arms[i];
 
-                int action = (input & ACTION) + (Input::joy[i].down[jkA] ? 1 : 0);
-                if (arm.target || (action && !arm.tracking)) {
-                    if (arm.anim == Weapon::Anim::HOLD)
-                        wpnSetAnim(arm, wpnState, Weapon::Anim::AIM, 0.0f, 1.0f);
-                } else
-                    if (arm.anim == Weapon::Anim::AIM)
+                if (useIKAim)
+                {
+                    if  (Input::joy[i].down[jkA] && arm.anim != Weapon::Anim::FIRE)
+                            wpnSetAnim(arm, wpnState, Weapon::Anim::FIRE, 0.0f, 1.0f);
+                }
+                else
+                {
+                    int action = (input & ACTION);
+                    if (arm.target || (action && !arm.tracking))
+                    {
+                        if (arm.anim == Weapon::Anim::HOLD)
+                            wpnSetAnim(arm, wpnState, Weapon::Anim::AIM, 0.0f, 1.0f);
+                    }
+                    else if (arm.anim == Weapon::Anim::AIM)
                         arm.animation.dir = -1.0f;
+                }
 
                 if (isRifle) break;
             }
@@ -1328,7 +1348,7 @@ struct Lara : Character {
     }
 
     void animateShotgun() {
-        Arm &arm = arms[0];
+        Arm &arm = arms[Core::settings.detail.handedness];
         if (arm.animation.dir >= 0.0f) {
             if (arm.animation.isEnded) {
                 switch (arm.anim) {

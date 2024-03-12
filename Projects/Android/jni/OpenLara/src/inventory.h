@@ -139,6 +139,13 @@ static const OptionItem optDetail[] = {
 #if defined(_OS_WIN) || defined(_OS_LINUX) || defined(_OS_PSP) || defined(_OS_RPI) || defined(_OS_PSV)
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_VSYNC,    SETTINGS( detail.vsync     ), STR_OFF, 0, 1 ),
 #endif
+
+    OptionItem( ),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HANDEDNESS,   SETTINGS( detail.handedness    ), STR_RIGHT_HANDED, 0, 1),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 2),
+
+    /* Removed the VR option selection since it is always VR */
+#if 0
 #if !defined(_OS_PSP) && !defined(_OS_PSV) && !defined(_OS_3DS) && !defined(_OS_GCW0)
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_STEREO,   SETTINGS( detail.stereo    ), STR_NO_STEREO, 0, 
     #if defined(_OS_WIN) || defined(_OS_ANDROID)
@@ -148,6 +155,8 @@ static const OptionItem optDetail[] = {
     #endif
     ),
 #endif
+#endif //0
+
     OptionItem( ),
     OptionItem( OptionItem::TYPE_BUTTON, STR_APPLY ),
 };
@@ -2097,7 +2106,7 @@ struct Inventory {
             const char *bSelect = STR[STR_KEY_FIRST + ikEnter];
             const char *bBack   = STR[STR_KEY_FIRST + Core::settings.controls[playerIndex].keys[cInventory].key];
 
-            #if defined(_OS_SWITCH) || defined(_OS_3DS) || defined(_OS_GCW0)
+            #if defined(_OS_SWITCH) || defined(_OS_3DS) || defined(_OS_GCW0) || defined(ANDROID)
                 bSelect = "A";
                 bBack   = "B";
             #endif

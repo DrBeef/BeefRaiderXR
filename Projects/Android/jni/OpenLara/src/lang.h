@@ -17,11 +17,11 @@ enum StringID {
     , STR_NO
     , STR_OFF
     , STR_ON
-    , STR_NO_STEREO
-    , STR_SBS
-    , STR_ANAGLYPH
-    , STR_SPLIT
-    , STR_VR
+    , STR_RIGHT_HANDED
+    , STR_LEFT_HANDED
+    , STR_SNAP_TURN
+    , STR_SMOOTH_TURN_SLOW
+    , STR_SMOOTH_TURN_FAST
     , STR_QUALITY_LOW
     , STR_QUALITY_MEDIUM
     , STR_QUALITY_HIGH
@@ -80,7 +80,8 @@ enum StringID {
     , STR_OPT_DETAIL_SHADOWS
     , STR_OPT_DETAIL_WATER
     , STR_OPT_DETAIL_VSYNC
-    , STR_OPT_DETAIL_STEREO
+    , STR_OPT_DETAIL_HANDEDNESS
+    , STR_OPT_DETAIL_TURNMODE
     , STR_OPT_SIMPLE_ITEMS
     , STR_OPT_RESOLUTION
     , STR_SCALE_100
@@ -260,7 +261,7 @@ enum StringID {
     , "Italiano"      \
     , "Polski"        \
     , "Portugu(es"    \
-    , "Русски{и"      \
+    , "пїЅпїЅпїЅпїЅпїЅпїЅ{пїЅ"      \
     , "\x11\x02\x70\x01\x97\x01\xD6\xFF\xFF" \
     , "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x01\x0C\x01\x0B\xFF\xFF" \
     , "Suomi"         \

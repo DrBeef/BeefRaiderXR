@@ -393,6 +393,12 @@ struct vec2 {
     vec2& rotate(const vec2 &cs) { *this = vec2(x*cs.x - y*cs.y, x*cs.y + y*cs.x); return *this; }
     vec2& rotate(float angle)    { vec2 cs; sincos(angle, &cs.y, &cs.x); return rotate(cs); }
 
+    int quadrant()  const {
+        float angle = RAD2DEG * atan2f(x, y);
+        if (angle < 0.f) angle += 360.f;
+        return (angle + 45.f) / 90.f;
+    }
+
     vec2 lerp(const vec2 &v, const float t) const {
         if (t <= 0.0f) return *this;
         if (t >= 1.0f) return v;

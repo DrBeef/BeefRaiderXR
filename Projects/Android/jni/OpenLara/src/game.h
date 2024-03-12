@@ -92,7 +92,6 @@ void loadSettings(Stream *stream, void *userData) {
         delete stream;
     }
 
-    Core::settings.detail.stereo = Core::Settings::STEREO_VR;
     if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
         osToggleVR(true);
     }
