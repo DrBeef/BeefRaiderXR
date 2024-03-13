@@ -1392,6 +1392,11 @@ struct Box {
         return max - min;
     }
 
+    void expand(const float &v) {
+        min *= v;
+        max *= v;
+    }
+
     void expand(const vec3 &v) {
         min -= v;
         max += v;

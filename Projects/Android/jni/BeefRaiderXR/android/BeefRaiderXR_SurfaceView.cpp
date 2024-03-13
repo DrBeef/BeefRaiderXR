@@ -944,17 +944,61 @@ void VR_HandleControllerInput() {
     }
     */
 
-    //The only time joyLeft is used is to indicate the firing of the left hand weapon
-    Input::setJoyDown(joyLeft, jkA,  leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
-    Input::setJoyDown(joyRight, jkA,  rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
 
-    //Walk
-    Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+    vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
+                                  leftRemoteTracking_new.GripPose.position.y,
+                                  leftRemoteTracking_new.GripPose.position.z);
+
+    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
+                                     leftRemoteTracking_new.GripPose.orientation.y,
+                                     leftRemoteTracking_new.GripPose.orientation.z,
+                                     leftRemoteTracking_new.GripPose.orientation.w);
+
+    vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
+                                   rightRemoteTracking_new.GripPose.position.y,
+                                   rightRemoteTracking_new.GripPose.position.z);
+
+    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
+                                      rightRemoteTracking_new.GripPose.orientation.y,
+                                      rightRemoteTracking_new.GripPose.orientation.z,
+                                      rightRemoteTracking_new.GripPose.orientation.w);
+
+    bool twoHandShotgun = false;
+    if (!inventory->game->getLara() || ((Lara*)inventory->game->getLara())->emptyHands())
+    {
+        //with empty hands left or right trigger is action
+        Input::setJoyDown(joyRight, jkA,  (leftTrackedRemoteState_new.IndexTrigger+rightTrackedRemoteState_new.IndexTrigger) > 0.4f ? 1 : 0);
+
+        //Walk
+        Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+    }
+    else
+    {
+        //The only time joyLeft is used is to indicate the firing of the left hand weapon
+        Input::setJoyDown(joyLeft, jkA,  leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+        Input::setJoyDown(joyRight, jkA,  rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+
+        //See if we should be trying to two hand the shotgun
+/*        if (((Lara*)inventory->game->getLara())->wpnCurrent == TR::Entity::SHOTGUN)
+        {
+            vec3 dir = (Core::settings.detail.handedness == 0 ? vrRightControllerOrientation : vrLeftControllerOrientation) * vec3(0, 1, 0);
+            if ((Core::settings.detail.handedness == 0 ? leftTrackedRemoteState_new.GripTrigger : rightTrackedRemoteState_new.GripTrigger) > 0.4f)// &&
+                dir.dot((vrRightControllerPosition - vrLeftControllerPosition).normal()) > 0.5f)
+            {
+                twoHandShotgun = true;
+            }
+        }
+        else */
+        {
+            //Walk
+            Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+        }
+    }
 
     //Jump
     Input::setJoyDown(joyRight, jkX, rightTrackedRemoteState_new.Buttons & xrButton_A);
 
-    //Unholster weapons
+    //Holster/Unholster weapons
     Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
 
     //Roll - Reverse Direction - Right thumbstick click
@@ -1050,19 +1094,21 @@ void VR_HandleControllerInput() {
         rotation += -33.6718750f;
     }
 
-    mat4 controllerPitchAdjustMat;
-    controllerPitchAdjustMat.identity();
-    //controllerPitchAdjustMat.rotateX(DEG2RAD * rotation);
-
-    vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
-                                   rightRemoteTracking_new.GripPose.position.y,
-                                   rightRemoteTracking_new.GripPose.position.z);
-    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
-                                      rightRemoteTracking_new.GripPose.orientation.y,
-                                      rightRemoteTracking_new.GripPose.orientation.z,
-                                      rightRemoteTracking_new.GripPose.orientation.w);
-
     vrRightControllerPosition = vrRightControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
+    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
+
+    if (twoHandShotgun)
+    {
+        Basis basis = Basis(vrRightControllerPosition, vrLeftControllerPosition, vec3(1, 0, 0));
+        if (Core::settings.detail.handedness == 0)
+        {
+            vrRightControllerOrientation = basis.rot.conjugate();
+        }
+        else
+        {
+            vrLeftControllerOrientation = basis.rot;
+        }
+    }
 
     mat4 snapTurnMat;
     snapTurnMat.identity();
@@ -1070,7 +1116,7 @@ void VR_HandleControllerInput() {
     vec3 zero = Input::hmd.zero;
     zero = zero.rotateY(-DEG2RAD * vr.snapTurn);
 
-    mat4 cR = snapTurnMat * controllerPitchAdjustMat * mat4(vrRightControllerOrientation, vec3(0));
+    mat4 cR = snapTurnMat * mat4(vrRightControllerOrientation, vec3(0));
     cR.setPos((vrRightControllerPosition - zero) * ONE_METER);
 
     //I don't know what this does but it is necessary for some reason!
@@ -1083,17 +1129,7 @@ void VR_HandleControllerInput() {
     cR = scaleBasis * cR * scaleBasis.inverse();
     Input::hmd.controllers[0] = cR;
 
-    vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
-                                  leftRemoteTracking_new.GripPose.position.y,
-                                  leftRemoteTracking_new.GripPose.position.z);
-    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
-                                     leftRemoteTracking_new.GripPose.orientation.y,
-                                     leftRemoteTracking_new.GripPose.orientation.z,
-                                     leftRemoteTracking_new.GripPose.orientation.w);
-
-    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
-
-    mat4 cL = snapTurnMat * controllerPitchAdjustMat * mat4(vrLeftControllerOrientation, vec3(0));
+    mat4 cL = snapTurnMat * mat4(vrLeftControllerOrientation, vec3(0));
     cL.setPos((vrLeftControllerPosition - zero) * ONE_METER);
 
     cL = scaleBasis * cL * scaleBasis.inverse();

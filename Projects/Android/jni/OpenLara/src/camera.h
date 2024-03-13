@@ -615,7 +615,7 @@ struct Camera : ICamera {
         }
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
-            updateListener(mViewInv * Input::hmd.head);
+            updateListener(mViewInv * Input::hmd.body);
         else
             updateListener(mViewInv);
     }
@@ -695,7 +695,7 @@ struct Camera : ICamera {
         if (firstPerson)
             smooth = false;
 
-        fov   = firstPerson ? 90.0f : 65.0f;
+        fov   = firstPerson ? 130.0f : 65.0f;
         znear = firstPerson ? 16.0f : 32.0f;
         zfar  = 45.0f * 1024.0f;
 

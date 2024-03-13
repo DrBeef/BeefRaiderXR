@@ -239,6 +239,8 @@ struct Lara : Character {
     #define LARA_LGUN_JOINT 13
     #define LARA_RGUN_OFFSET vec3(-10, -50, 0)
     #define LARA_LGUN_OFFSET vec3( 10, -50, 0)
+    #define LARA_RSHOTGUN_OFFSET vec3(-15, -30, 110)
+    #define LARA_LSHOTGUN_OFFSET vec3( 15, -30, 110)
 
     enum {
         JOINT_HIPS = 0,
@@ -893,7 +895,7 @@ struct Lara : Character {
     }
 
     bool emptyHands() {
-        return wpnCurrent == TR::Entity::NONE || arms[0].anim == Weapon::Anim::NONE;
+        return wpnCurrent == TR::Entity::NONE || arms[Core::settings.detail.handedness].anim == Weapon::Anim::NONE;
     }
 
     bool canLookAt() {
@@ -988,7 +990,9 @@ struct Lara : Character {
                   //|| state == STATE_BACK_JUMP
                   //|| state == STATE_RIGHT_JUMP
                   //|| state == STATE_LEFT_JUMP
-                  //|| state == STATE_UP_JUMP
+                  || state == STATE_COMPRESS
+                  || state == STATE_UP_JUMP
+                  || state == STATE_FORWARD_JUMP
                   //|| state == STATE_SWIM
                   || state == STATE_TREAD
                   || state == STATE_FAST_BACK
@@ -1074,6 +1078,10 @@ struct Lara : Character {
         bool armShot[2] = { false, false };
         if (useIKAim) {
             for (int i = 0; i < 2; i++) {
+                if (wpnCurrent == TR::Entity::SHOTGUN &&
+                    Core::settings.detail.handedness != i)
+                    continue;
+
                 Arm &arm = arms[i];
                 if (arm.anim == Weapon::Anim::FIRE) {
                     Animation &anim = arm.animation;
@@ -1094,8 +1102,6 @@ struct Lara : Character {
                     }
                 }
                 arm.animation.framePrev = arm.animation.frameIndex;
-
-                if (wpnCurrent == TR::Entity::SHOTGUN) break;
             }
 
             if (armShot[0] || armShot[1])
@@ -1106,6 +1112,10 @@ struct Lara : Character {
         for (int i = 0; i < 2; i++) {
             Arm &arm = arms[i];
             if (arm.anim == Weapon::Anim::FIRE) {
+                if (wpnCurrent == TR::Entity::SHOTGUN &&
+                    Core::settings.detail.handedness != i)
+                    continue;
+
                 Animation &anim = arm.animation;
                 //int realFrameIndex = int(arms[i].animation.time * 30.0f / anim->frameRate) % ((anim->frameEnd - anim->frameStart) / anim->frameRate + 1);
                 if (anim.frameIndex != anim.framePrev) {
@@ -1123,8 +1133,6 @@ struct Lara : Character {
                 }
             }
             arm.animation.framePrev = arm.animation.frameIndex;
-
-            if (wpnCurrent == TR::Entity::SHOTGUN) break;
         }
 
         if (armShot[0] || armShot[1])
@@ -1138,7 +1146,8 @@ struct Lara : Character {
         mat4 pitchAdjust, yawAdjust;
         pitchAdjust.identity();
         yawAdjust.identity();
-        pitchAdjust.rotateX(DEG2RAD * 8);
+        if (wpnCurrent != TR::Entity::SHOTGUN)
+            pitchAdjust.rotateX(DEG2RAD * 8);
         yawAdjust.rotateY(DEG2RAD * (i == 0 ? -3.5f : 3.5f));
 
         return yawAdjust.getRot() * Input::hmd.controllers[i].getRot() * pitchAdjust.getRot();
@@ -1160,8 +1169,12 @@ struct Lara : Character {
         for (int i = 0; i < count; i++) {
             int armIndex;
             if (wpnCurrent == TR::Entity::SHOTGUN) {
-                if (!rightHand) continue;
-                armIndex = 0;
+                if (Core::settings.detail.handedness == 0 && !rightHand)
+                    continue;
+                if (Core::settings.detail.handedness == 1 && !leftHand)
+                    continue;
+
+                armIndex = Core::settings.detail.handedness;
             } else {
                 if (!(i ? leftHand : rightHand)) continue;
                 armIndex = i;
@@ -1177,18 +1190,40 @@ struct Lara : Character {
 
             shots++;
 
-            if (wpnCurrent != TR::Entity::SHOTGUN)
-                game->addMuzzleFlash(this, i ? LARA_LGUN_JOINT : LARA_RGUN_JOINT, i ? LARA_LGUN_OFFSET : LARA_RGUN_OFFSET, 1 + camera->cameraIndex);
+            if (wpnCurrent == TR::Entity::SHOTGUN)
+            {
+                game->addMuzzleFlash(this, Core::settings.detail.handedness ? LARA_LGUN_JOINT : LARA_RGUN_JOINT,
+                                     Core::settings.detail.handedness ? LARA_LSHOTGUN_OFFSET : LARA_RSHOTGUN_OFFSET,
+                                     1 + camera->cameraIndex);
+            }
+            else
+            {
+                game->addMuzzleFlash(this, i ? LARA_LGUN_JOINT : LARA_RGUN_JOINT,
+                                     i ? LARA_LGUN_OFFSET : LARA_RGUN_OFFSET,
+                                     1 + camera->cameraIndex);
+            }
 
         // TODO: use new trace code
             vec3 p, d, t;
 
             if (useIKAim) {
-                int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R3 : (i ? JOINT_ARM_L3 : JOINT_ARM_R3);
+                int joint = wpnCurrent == TR::Entity::SHOTGUN ?
+                            ((Core::settings.detail.handedness == 0) ? JOINT_ARM_R3 : JOINT_ARM_L3) :
+                            (i ? JOINT_ARM_L3 : JOINT_ARM_R3);
                 p = getJoint(joint).pos;
-                d = getAdjustedControllerRot(i) * vec3(0, 1, 0);
+                d = getAdjustedControllerRot(armIndex) * vec3(0, 1, 0);
 #define VR_BULLET_DISTANCE_MULTIPLIER   2.0f
                 t = p + d * 15.0f * 1024.0f * VR_BULLET_DISTANCE_MULTIPLIER;
+
+                //Add scatter of shotgun shells
+                if (wpnCurrent == TR::Entity::SHOTGUN)
+                {
+                    t +=  ((vec3(randf(), randf(), randf()) * 2.0f) - vec3(1.0f)) * 1024.0f;
+                }
+
+                //Use per-frame targeting based on the orientation of the gun
+                Controller *target = NULL;
+                getIKTarget(p, d, arm->target);
             } else {
                 int joint = wpnCurrent == TR::Entity::SHOTGUN ? JOINT_ARM_R1 : (i ? JOINT_ARM_L1 : JOINT_ARM_R1);
                 p = getJoint(joint).pos;
@@ -1257,8 +1292,12 @@ struct Lara : Character {
             if (useIKAim) {
                 for (int i = 0; i < 2; ++i)
                 {
+                    if (wpnCurrent == TR::Entity::SHOTGUN && Core::settings.detail.handedness != i)
+                        continue;
+
                     vec3 p, d, t;
-                    int joint = wpnCurrent == TR::Entity::SHOTGUN ? (Core::settings.detail.handedness ? JOINT_ARM_R3: JOINT_ARM_L3) :
+                    int joint = wpnCurrent == TR::Entity::SHOTGUN ?
+                            (Core::settings.detail.handedness ? JOINT_ARM_R3: JOINT_ARM_L3) :
                             (i ? JOINT_ARM_L3 : JOINT_ARM_R3);
 
                     p = getJoint(joint).pos;
@@ -1269,16 +1308,13 @@ struct Lara : Character {
                     vec3 hit = trace(getRoomIndex(), p, t, room, false);
                     hit -= d * 64.0f;
                     //game->addEntity(TR::Entity::BUBBLE, room, hit);
-
-                    if (wpnCurrent == TR::Entity::SHOTGUN)
-                        break;
                 }
             }
 
             bool isRifle = wpnCurrent == TR::Entity::SHOTGUN;
 
             for (int i = 0; i < 2; i++) {
-                if (isRifle && Core::settings.detail.handedness == 1)
+                if (isRifle && Core::settings.detail.handedness != i)
                     continue;
 
                 Arm &arm = arms[i];
@@ -1540,7 +1576,7 @@ struct Lara : Character {
         arms[0].target = arms[1].target = NULL;
         viewTarget = NULL;
 
-        if (emptyHands() || !wpnReady()) {
+        if (emptyHands() || !wpnReady() || useIKAim) {
             arms[0].tracking = arms[1].tracking = NULL;
             return;
         }
@@ -1665,6 +1701,48 @@ struct Lara : Character {
             target2 = target1;
     }
 
+    void getIKTarget(vec3 _pos, vec3 dir, Controller *&target) {
+        //Allow greater aiming distance for IK
+        float dist  = TARGET_MAX_DIST * 4.f;
+        float dot  = -1.0f;
+
+        target = NULL;
+
+        vec3 from = pos - vec3(0, 650, 0);
+
+        Controller *c = Controller::first;
+        do {
+            if (!c->getEntity().isEnemy())
+                continue;
+
+            Character *enemy = (Character*)c;
+            if (!enemy->isActiveTarget())
+                continue;
+
+            Box box = enemy->getBoundingBox();
+            vec3 p = box.center();
+            p.y = box.min.y + (box.max.y - box.min.y) / 3.0f;
+
+            vec3 v = p - _pos;
+            float aimdot = dir.dot(v.normal());
+            if (aimdot <= 0.8f)
+                continue;
+
+            float d = v.length();
+
+            if (d > dist || !checkOcclusion(from, p, d))
+                continue;
+
+            //We want the target with the highest dot product as
+            //that'll be the one we are closest to and pointing most at
+            if (aimdot > dot) {
+                target = enemy;
+                dist = d;
+                dot = aimdot;
+            }
+        } while ((c = c->next));
+    }
+
     bool checkOcclusion(const vec3 &from, const vec3 &to, float dist) {
         int room;
         vec3 d = trace(getRoomIndex(), from, to, room, false); // check occlusion
@@ -1672,7 +1750,13 @@ struct Lara : Character {
     }
 
     bool checkHit(Controller *target, const vec3 &from, const vec3 &to, vec3 &point) {
+
         Box box = target->getBoundingBoxLocal();
+
+        //Expand the box by 25% if the enemy if it is smaller than Lara, just to help out
+        float expand = (useIKAim && (getBoundingBoxLocal().size().length() > box.size().length())) ?
+                1.5f : 1.f;
+        box.expand(expand );
         mat4 m  = target->getMatrix();
 
         float t;
@@ -1685,6 +1769,7 @@ struct Lara : Character {
             int count = target->getSpheres(spheres);
             for (int i = 0; i < count; i++) {
                 float st;
+                spheres[i].radius *= expand;
                 if (spheres[i].intersect(from, v, st)) {
                     point = from + v * max(t, st);
                     return true;
@@ -3302,10 +3387,12 @@ struct Lara : Character {
             vec3 ang = getAngleAbs(Input::hmd.head.dir().xyz());
             angle.y = ang.y;
 
+            /*
             if (stand == STAND_UNDERWATER) {
                 input &= ~(FORTH | BACK);
                 angle.x = ang.x;
             }
+             */
         }
         return input;
     }
