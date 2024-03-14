@@ -78,10 +78,10 @@ void  osJoyVibrate(int index, float L, float R)
         TBXR_Vibrate(100, 2, L);
 }
 
-void osStartLevel()
+void osBeforeLoadNextLevel()
 {
     //Level reset
-    vr.snapTurn = 0.f;
+    Input::hmd.extrarot = 0.f;
 }
 
 // sound
@@ -312,7 +312,7 @@ void VR_SetHMDPosition(float x, float y, float z )
 		if (vr.cin_camera)
 		{
 			//Reset snap turn too if in a cinematic
-			vr.snapTurn = 0;
+			Input::hmd.extrarot = 0;
 		}
 		vr.take_snap = false;
     }
@@ -326,65 +326,6 @@ void VR_SetHMDPosition(float x, float y, float z )
 	VectorCopy(vr.hmdposition, vr.hmdposition_last);
 }
 
-void VR_GetMove(float *forward, float *side, float *pos_forward, float *pos_side, float *up,
-				float *yaw, float *pitch, float *roll)
-{
-	if (vr.remote_turret) {
-		*forward = 0.0f;
-		*pos_forward = 0.0f;
-		*up = 0.0f;
-		*side = 0.0f;
-		*pos_side = 0.0f;
-		*yaw = vr.snapTurn + vr.hmdorientation_first[YAW] +
-				vr.weaponangles[ANGLES_ADJUSTED][YAW] - vr.weaponangles_first[ANGLES_ADJUSTED][YAW];
-		*pitch = vr.weaponangles[ANGLES_ADJUSTED][PITCH];
-		*roll = 0.0f;
-	}
-	else if (vr.cgzoommode == 2 || vr.cgzoommode == 4)
-	{
-		*forward = remote_movementForward / 3.0f;
-		*pos_forward = 0.0f;
-		*up = 0.0f;
-		*side = remote_movementSideways / 3.0f;
-		*pos_side = 0.0f;
-		*yaw = vr.snapTurn + vr.hmdorientation_first[YAW] +
-                             vr.weaponangles[ANGLES_ADJUSTED][YAW] - vr.weaponangles_first[ANGLES_ADJUSTED][YAW];
-		*pitch = vr.weaponangles[ANGLES_ADJUSTED][PITCH];
-		*roll = 0.0f;//vr.hmdorientation[ROLL];
-	}
-	else if (vr.remote_npc) {
-		*forward = remote_movementForward;
-		*pos_forward = 0.0f;
-		*up = 0.0f;
-		*side = remote_movementSideways;
-		*pos_side = 0.0f;
-		*yaw = vr.hmdorientation[YAW] + vr.snapTurn;
-		*pitch = vr.hmdorientation[PITCH];
-		*roll = 0.0f;
-	}
-	else if (!vr.third_person) {
-		*forward = remote_movementForward;
-		*pos_forward = positional_movementForward;
-		*up = remote_movementUp;
-		*side = remote_movementSideways;
-
-		*pos_side = positional_movementSideways;
-		*yaw = vr.hmdorientation[YAW] + vr.snapTurn;
-		*pitch = vr.hmdorientation[PITCH];
-		*roll = 0.0f;//vr.hmdorientation[ROLL];
-	} else {
-		//in third person just send the bare minimum
-		*forward = remote_movementForward;
-		*pos_forward = 0.0f;
-		*up = 0.0f;
-		*side = remote_movementSideways;
-		*pos_side = 0.0f;
-		*yaw = vr.snapTurn + vr.hmdorientation_first[YAW];
-		*pitch = 0.0f;
-		*roll = 0.0f;
-	}
-}
-
 static bool forceUpdatePose = false;
 
 void VR_Init()
@@ -395,7 +336,7 @@ void VR_Init()
 	remote_movementUp = 0.0f;
 	positional_movementSideways = 0.0f;
 	positional_movementForward = 0.0f;
-	vr.snapTurn = 0.0f;
+	Input::hmd.extrarot = 0.0f;
 	vr.immersive_cinematics = true;
 	vr.move_speed = 1; // Default to full speed now
 
@@ -611,7 +552,7 @@ void VR_FrameSetup()
 
     mat4 snapTurnMat;
     snapTurnMat.identity();
-    snapTurnMat.rotateY(DEG2RAD * vr.snapTurn);
+    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
 
     mat4 head = snapTurnMat * mat4(vrOrientation, vec3(0));
 
@@ -634,11 +575,11 @@ void VR_FrameSetup()
         forceUpdatePose = false;
     }
 
-    vrPosition = vrPosition.rotateY(-DEG2RAD * vr.snapTurn);
+    vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
 
     Input::hmd.body = head; // direction body is facing
     vec3 zero = Input::hmd.zero;
-    zero = zero.rotateY(-DEG2RAD * vr.snapTurn);
+    zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
     Input::hmd.head.setPos(vrPosition - zero);
 
     //Left eye
@@ -800,7 +741,6 @@ void VR_HandleControllerInput() {
 
     bool usingSnapTurn = Core::settings.detail.turnmode == 0;
 
-
     if (!inventory->isActive())
     {
         static int increaseSnap = true;
@@ -811,11 +751,11 @@ void VR_HandleControllerInput() {
                 {
                     if (increaseSnap)
                     {
-                        vr.snapTurn -= vr_turn_angle->value;
+                        Input::hmd.extrarot -= vr_turn_angle->value;
                         increaseSnap = false;
-                        if (vr.snapTurn < -180.0f)
+                        if (Input::hmd.extrarot < -180.0f)
                         {
-                            vr.snapTurn += 360.f;
+                            Input::hmd.extrarot += 360.f;
                         }
                     }
                 }
@@ -832,12 +772,12 @@ void VR_HandleControllerInput() {
                 {
                     if (decreaseSnap)
                     {
-                        vr.snapTurn += vr_turn_angle->value;
+                        Input::hmd.extrarot += vr_turn_angle->value;
                         decreaseSnap = false;
 
-                        if (vr.snapTurn > 180.0f)
+                        if (Input::hmd.extrarot > 180.0f)
                         {
-                            vr.snapTurn -= 360.f;
+                            Input::hmd.extrarot -= 360.f;
                         }
                     }
                 }
@@ -849,11 +789,11 @@ void VR_HandleControllerInput() {
 
             if (!usingSnapTurn && fabs(rightTrackedRemoteState_new.Joystick.x) > 0.1f) //smooth turn
             {
-                vr.snapTurn -= (Core::settings.detail.turnmode *
+                Input::hmd.extrarot -= (Core::settings.detail.turnmode *
                                 rightTrackedRemoteState_new.Joystick.x);
-                if (vr.snapTurn > 180.0f)
+                if (Input::hmd.extrarot > 180.0f)
                 {
-                    vr.snapTurn -= 360.f;
+                    Input::hmd.extrarot -= 360.f;
                 }
             }
         }
@@ -864,11 +804,31 @@ void VR_HandleControllerInput() {
 
     bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
 
+    Lara *lara = nullptr;
     int laraState = -1;
     if (!inventory->isActive() &&
         inventory->game->getLara())
     {
-        laraState = inventory->game->getLara()->state;
+        lara = (Lara*)inventory->game->getLara();
+        laraState = lara->state;
+
+        if (lara->camera->firstPerson)
+        {
+            static bool reversed = false;
+            if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)
+            {
+                if (!reversed &&
+                    lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
+                {
+                    Input::hmd.extrarot += 180.f;
+                    reversed = true;
+                }
+            }
+            else
+            {
+                reversed = false;
+            }
+        }
     }
 
     if (laraState == Lara::STATE_SWIM ||
@@ -896,6 +856,12 @@ void VR_HandleControllerInput() {
                           joy.y);
             addMat.rotateY(-additionalDirAngle);
             Input::hmd.head = addMat * Input::hmd.body;
+        }
+        else if (laraState == Lara::STATE_RUN ||
+                 laraState == Lara::STATE_WALK)
+        {
+            lara->animation.setAnim(Lara::ANIM_STAND);
+            lara->state = Lara::STATE_STOP;
         }
 
         Input::setJoyPos(joyRight, jkL, vec2(0, -joy.length()));
@@ -1094,8 +1060,8 @@ void VR_HandleControllerInput() {
         rotation += -33.6718750f;
     }
 
-    vrRightControllerPosition = vrRightControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
-    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * vr.snapTurn);
+    vrRightControllerPosition = vrRightControllerPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
 
     if (twoHandShotgun)
     {
@@ -1112,9 +1078,9 @@ void VR_HandleControllerInput() {
 
     mat4 snapTurnMat;
     snapTurnMat.identity();
-    snapTurnMat.rotateY(DEG2RAD * vr.snapTurn);
+    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
     vec3 zero = Input::hmd.zero;
-    zero = zero.rotateY(-DEG2RAD * vr.snapTurn);
+    zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
 
     mat4 cR = snapTurnMat * mat4(vrRightControllerOrientation, vec3(0));
     cR.setPos((vrRightControllerPosition - zero) * ONE_METER);

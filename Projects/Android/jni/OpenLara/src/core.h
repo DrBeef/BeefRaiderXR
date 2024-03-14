@@ -385,7 +385,7 @@ void osToggleVR(bool enable) {
 }
 #endif
 
-extern void osStartLevel();
+extern void osBeforeLoadNextLevel();
 
 
 #ifdef PROFILE

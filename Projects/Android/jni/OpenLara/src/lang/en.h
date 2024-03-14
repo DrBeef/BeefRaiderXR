@@ -48,7 +48,7 @@ const char *STR_EN[] = { ""
     , "Save Game?"
     , "Current Position"
 // inventory option
-    , "Game"
+    , "Go Beef Raiding!"
     , "Map"
     , "Compass"
     , "Statistics"

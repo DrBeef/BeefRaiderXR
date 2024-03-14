@@ -696,7 +696,7 @@ struct Lara : Character {
         data.extra.lara.oxygen      = oxygen;
         data.extra.lara.stamina     = 0.0f;
         data.extra.lara.poison      = 0.0f;
-        data.extra.lara.freeze      = 0.0f;
+        data.extra.lara.freeze      = Input::hmd.extrarot; // DrBeef - Just gonna pinch this one..
         data.extra.lara.reserved    = 0;
         data.extra.lara.itemWeapon  = wpnCurrent;
         data.extra.lara.itemHands   = getItemHands();
@@ -716,6 +716,9 @@ struct Lara : Character {
         angle.x  = TR::angle(data.extra.lara.angleX);
         health   = data.extra.lara.health;
         oxygen   = data.extra.lara.oxygen;
+
+        // DrBeef - Just gonna pinch this one..
+        Input::hmd.extrarot = data.extra.lara.freeze;
 
         if (level->isHome()) return;
 
@@ -4208,7 +4211,10 @@ struct Lara : Character {
             return this->pos.y;
         }
 
-        return level->getFloor(sector, pos);// - LARA_HEEL_HEIGHT;
+        //Using this fixes walking on bridges or collapsing floors!
+        TR::Level::FloorInfo info;
+        getFloorInfo(roomIndex, pos, info);
+        return info.floor;
     }
 
     virtual void updateIK() override {

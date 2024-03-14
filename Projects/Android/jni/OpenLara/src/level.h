@@ -119,6 +119,9 @@ struct Level : IGame {
                 showStats = true;
             }
         }
+
+        osBeforeLoadNextLevel();
+
         loadLevel(id);
     }
 

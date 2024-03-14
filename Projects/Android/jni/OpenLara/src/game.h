@@ -63,8 +63,6 @@ namespace Game {
         if (level->level.isTitle() && id != TR::LVL_MAX && !TR::isGameEnded)
             playVideo = false;
 
-        osStartLevel();
-
         level->init(playLogo, playVideo);
 
         UI::game = level;

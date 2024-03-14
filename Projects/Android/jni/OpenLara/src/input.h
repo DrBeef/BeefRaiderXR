@@ -39,6 +39,7 @@ namespace Input {
     struct HMD {
         mat4 head; // heading
         mat4 body; // body facing direction (set from HMD
+        float extrarot; // additional yaw angle from snap/smooth turn
         mat4 eye[2];
         mat4 proj[2];
         mat4 controllers[2];
@@ -58,6 +59,7 @@ namespace Input {
             eye[1].identity();
             proj[0].identity();
             proj[1].identity();
+            extrarot = 0;
         }
     } hmd;
 
