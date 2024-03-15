@@ -59,7 +59,6 @@ namespace Input {
             eye[1].identity();
             proj[0].identity();
             proj[1].identity();
-            extrarot = 0;
         }
     } hmd;
 

@@ -453,8 +453,7 @@ void * AppThreadFunction(void * parm ) {
 	//Set device defaults
 	if (SS_MULTIPLIER == 0.0f)
 	{
-		//GB Override as refresh is now 72 by default as we decided a higher res is better as 90hz has stutters
-		SS_MULTIPLIER = 1.25f;
+		SS_MULTIPLIER = 1.2f;
 	}
 	else if (SS_MULTIPLIER > 1.5f)
 	{
@@ -831,6 +830,14 @@ void VR_HandleControllerInput() {
         }
     }
 
+    bool actionPressed = false;
+    if (!lara || lara->emptyHands())
+    {
+        //with empty hands left or right trigger is action
+        actionPressed = (leftTrackedRemoteState_new.IndexTrigger +
+                         rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
+    }
+
     if (laraState == Lara::STATE_SWIM ||
         laraState == Lara::STATE_TREAD ||
         laraState == Lara::STATE_GLIDE)
@@ -840,7 +847,8 @@ void VR_HandleControllerInput() {
     }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
     // is pressing the thumbstick like a modern game
-    else if ((laraState == Lara::STATE_STOP ||
+    else if (!actionPressed &&
+            (laraState == Lara::STATE_STOP ||
               laraState == Lara::STATE_RUN ||
               laraState == Lara::STATE_WALK ||
               laraState == Lara::STATE_FORWARD_JUMP))
@@ -930,7 +938,7 @@ void VR_HandleControllerInput() {
                                       rightRemoteTracking_new.GripPose.orientation.w);
 
     bool twoHandShotgun = false;
-    if (!inventory->game->getLara() || ((Lara*)inventory->game->getLara())->emptyHands())
+    if (!lara || lara->emptyHands())
     {
         //with empty hands left or right trigger is action
         Input::setJoyDown(joyRight, jkA,  (leftTrackedRemoteState_new.IndexTrigger+rightTrackedRemoteState_new.IndexTrigger) > 0.4f ? 1 : 0);
@@ -991,11 +999,13 @@ void VR_HandleControllerInput() {
         if (leftTrackedRemoteState_new.Buttons & xrButton_X)
         {
             Game::quickSave();
+            //inventory->game->invShow(0, Inventory::PAGE_SAVEGAME, 0);
             allowSaveLoad = false;
         }
         else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
         {
             Game::quickLoad();
+            //inventory->game->invShow(0, Inventory::PAGE_OPTION, TR::Entity::INV_PASSPORT);
             allowSaveLoad = false;
         }
     }

@@ -46,7 +46,7 @@ const char *STR_EN[] = { ""
     , "ITEMS"
 // save game page
     , "Save Game?"
-    , "Current Position"
+    , "Latest Quick/Crystal Save"
 // inventory option
     , "Go Beef Raiding!"
     , "Map"
