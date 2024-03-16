@@ -1008,7 +1008,7 @@ struct Inventory {
         switch (item->type) {
             case TR::Entity::INV_PASSPORT : {
                 game->playSound(TR::SND_INV_PAGE);
-                item->value = 1;
+                item->value = 0;
                 item->initLoadSlots(level);
                 break;
             }
@@ -1242,8 +1242,10 @@ struct Inventory {
                 toggle(playerIndex, targetPage);
             }
         } else if (page == PAGE_SAVEGAME) {
-            if (Input::lastState[playerIndex] == cLeft || Input::lastState[playerIndex] == cRight)
-                slot ^= 1;
+            if (key == cLeft)
+                slot = 1;
+            if (key == cRight)
+                slot = 0;
 
             if (key == cAction) {
                 if (slot == 1) {

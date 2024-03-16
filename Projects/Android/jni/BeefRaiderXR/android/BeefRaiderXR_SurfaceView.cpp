@@ -877,7 +877,7 @@ void VR_HandleControllerInput() {
     // If the user simply pressed the thumbstick in a particular direction that isn't forward
     // after already executing another move (like jump), then
     // we'll execute the move for that direction so treat it as a D pad
-    else
+    else if (!inventory->isActive())
     {
         //now adjust movement direction based on thumbstick direction
         vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
@@ -901,24 +901,6 @@ void VR_HandleControllerInput() {
         Input::hmd.head = Input::hmd.body;
     }
 
-    /*
-    static bool toggled = false;
-    if (toggled)
-    {
-        Input::setJoyDown(joyRight, jkSelect, false);
-        toggled = false;
-    }
-    else if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
-             rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
-            (inventory->isActive() && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
-             rightTrackedRemoteState_old.GripTrigger > 0.4f))
-    {
-        Input::setJoyDown(joyRight, jkSelect, true);
-        toggled = true;
-    }
-    */
-
-
     vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
                                   leftRemoteTracking_new.GripPose.position.y,
                                   leftRemoteTracking_new.GripPose.position.z);
@@ -937,56 +919,92 @@ void VR_HandleControllerInput() {
                                       rightRemoteTracking_new.GripPose.orientation.z,
                                       rightRemoteTracking_new.GripPose.orientation.w);
 
-    bool twoHandShotgun = false;
-    if (!lara || lara->emptyHands())
+    //Inventory controls
+    static bool AButtonActive = true; // This is used to suppress an A button event when you come out of the inventory so you don't immediately jump
+    if (inventory->isActive() || inventory-> video)
     {
-        //with empty hands left or right trigger is action
-        Input::setJoyDown(joyRight, jkA,  (leftTrackedRemoteState_new.IndexTrigger+rightTrackedRemoteState_new.IndexTrigger) > 0.4f ? 1 : 0);
-
-        //Walk
-        Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
-    }
-    else
-    {
-        //The only time joyLeft is used is to indicate the firing of the left hand weapon
-        Input::setJoyDown(joyLeft, jkA,  leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
-        Input::setJoyDown(joyRight, jkA,  rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
-
-        //See if we should be trying to two hand the shotgun
-/*        if (((Lara*)inventory->game->getLara())->wpnCurrent == TR::Entity::SHOTGUN)
+        Input::setJoyPos(joyRight, jkL, vec2((leftTrackedRemoteState_new.Joystick.x + rightTrackedRemoteState_new.Joystick.x), -(leftTrackedRemoteState_new.Joystick.y + rightTrackedRemoteState_new.Joystick.y)));
+        Input::setJoyDown(joyRight, jkA, AButtonActive && (rightTrackedRemoteState_new.Buttons & xrButton_A));
+        Input::setJoyDown(joyRight, jkSelect, (rightTrackedRemoteState_new.Buttons & xrButton_B) | (leftTrackedRemoteState_new.Buttons & xrButton_Y) | (leftTrackedRemoteState_new.Buttons & xrButton_Enter));
+        if (rightTrackedRemoteState_new.Buttons & xrButton_A)
         {
-            vec3 dir = (Core::settings.detail.handedness == 0 ? vrRightControllerOrientation : vrLeftControllerOrientation) * vec3(0, 1, 0);
-            if ((Core::settings.detail.handedness == 0 ? leftTrackedRemoteState_new.GripTrigger : rightTrackedRemoteState_new.GripTrigger) > 0.4f)// &&
-                dir.dot((vrRightControllerPosition - vrLeftControllerPosition).normal()) > 0.5f)
-            {
-                twoHandShotgun = true;
-            }
+            //Button was pressed, so disable A until it is released again
+            AButtonActive = false;
         }
-        else */
+    }
+
+    if (!AButtonActive && !(rightTrackedRemoteState_new.Buttons & xrButton_A))
+    {
+        AButtonActive = true;
+    }
+
+    bool twoHandShotgun = false;
+    if (lara)
+    {
+        if (lara->emptyHands())
         {
+            //with empty hands left or right trigger is action
+            Input::setJoyDown(joyRight, jkA, (leftTrackedRemoteState_new.IndexTrigger +
+                                              rightTrackedRemoteState_new.IndexTrigger) > 0.4f ? 1 : 0);
+
             //Walk
             Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
         }
+        else
+        {
+            //The only time joyLeft is used is to indicate the firing of the left hand weapon
+            Input::setJoyDown(joyLeft, jkA, leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+            Input::setJoyDown(joyRight, jkA,
+                              rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+
+            //See if we should be trying to two hand the shotgun
+            /*        if (((Lara*)inventory->game->getLara())->wpnCurrent == TR::Entity::SHOTGUN)
+                    {
+                        vec3 dir = (Core::settings.detail.handedness == 0 ? vrRightControllerOrientation : vrLeftControllerOrientation) * vec3(0, 1, 0);
+                        if ((Core::settings.detail.handedness == 0 ? leftTrackedRemoteState_new.GripTrigger : rightTrackedRemoteState_new.GripTrigger) > 0.4f)// &&
+                            dir.dot((vrRightControllerPosition - vrLeftControllerPosition).normal()) > 0.5f)
+                        {
+                            twoHandShotgun = true;
+                        }
+                    }
+                    else */
+            {
+                //Walk
+                Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+            }
+        }
+
+        //Jump
+        Input::setJoyDown(joyRight, jkX, AButtonActive && (rightTrackedRemoteState_new.Buttons & xrButton_A));
+
+        //Holster/Unholster weapons
+        Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
+
+        //Roll - Reverse Direction - Right thumbstick click
+        Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_RThumb);
     }
 
-    //Jump
-    Input::setJoyDown(joyRight, jkX, rightTrackedRemoteState_new.Buttons & xrButton_A);
-
-    //Holster/Unholster weapons
-    Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
-
-    //Roll - Reverse Direction - Right thumbstick click
-    Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_RThumb);
-
     //Menu / Options
-    Input::setJoyDown(joyRight, jkSelect, leftTrackedRemoteState_new.Buttons & xrButton_Enter);
-
-    //Inventory controls
-    if (inventory->isActive())
+    static bool allowOptions = false;
+    if (!allowOptions)
     {
-        Input::setJoyPos(joyRight, jkL, vec2((leftTrackedRemoteState_new.Joystick.x + rightTrackedRemoteState_new.Joystick.x), -(leftTrackedRemoteState_new.Joystick.y + rightTrackedRemoteState_new.Joystick.y)));
-        Input::setJoyDown(joyRight, jkA, (rightTrackedRemoteState_new.Buttons & xrButton_A) | (leftTrackedRemoteState_new.Buttons & xrButton_X));
-        Input::setJoyDown(joyRight, jkSelect, (rightTrackedRemoteState_new.Buttons & xrButton_B) | (leftTrackedRemoteState_new.Buttons & xrButton_Y) | (leftTrackedRemoteState_new.Buttons & xrButton_Enter));
+        allowOptions = !((bool)(leftTrackedRemoteState_new.Buttons & xrButton_Enter));
+    }
+    else
+    {
+        if (leftTrackedRemoteState_new.Buttons & xrButton_Enter)
+        {
+            inventory->toggle(0, Inventory::PAGE_OPTION);
+            allowOptions = false;
+        }
+    }
+
+    if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
+              rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
+             (inventory->isActive() && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
+              rightTrackedRemoteState_old.GripTrigger > 0.4f))
+    {
+        inventory->toggle(0, Inventory::PAGE_INVENTORY);
     }
 
     static bool allowSaveLoad = false;
@@ -996,17 +1014,19 @@ void VR_HandleControllerInput() {
     }
     else
     {
-        if (leftTrackedRemoteState_new.Buttons & xrButton_X)
+        if (!inventory->isActive())
         {
-            Game::quickSave();
-            //inventory->game->invShow(0, Inventory::PAGE_SAVEGAME, 0);
-            allowSaveLoad = false;
-        }
-        else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
-        {
-            Game::quickLoad();
-            //inventory->game->invShow(0, Inventory::PAGE_OPTION, TR::Entity::INV_PASSPORT);
-            allowSaveLoad = false;
+            if (leftTrackedRemoteState_new.Buttons & xrButton_X)
+            {
+                Game::quickSave();
+                //inventory->toggle(0, Inventory::PAGE_SAVEGAME);
+                allowSaveLoad = false;
+            }
+            else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
+            {
+                inventory->toggle(0, Inventory::PAGE_OPTION, TR::Entity::INV_PASSPORT);
+                allowSaveLoad = false;
+            }
         }
     }
 

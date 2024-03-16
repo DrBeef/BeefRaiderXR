@@ -3383,19 +3383,17 @@ struct Lara : Character {
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR && camera->firstPerson && canFreeRotate()) {
 
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
-            if (!(input & JUMP)) {
+            if (!(input & JUMP) && !inventory->isActive()) {
                 input &= ~(LEFT | RIGHT);
             }
 
             vec3 ang = getAngleAbs(Input::hmd.head.dir().xyz());
             angle.y = ang.y;
 
-            /*
             if (stand == STAND_UNDERWATER) {
                 input &= ~(FORTH | BACK);
                 angle.x = ang.x;
             }
-             */
         }
         return input;
     }
