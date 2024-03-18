@@ -2055,7 +2055,8 @@ struct Lara : Character {
             if (entity.type == TR::Entity::CRYSTAL) {
                 if (Input::lastState[camera->cameraIndex] == cAction) {
                     vec3 dir = controller->pos - pos;
-                    if (dir.length2() < SQR(350.0f) && getDir().dot(dir.normal()) > COS30) {
+                    //DrBeef - Increased distance and direction allowance
+                    if (dir.length2() < SQR(600.0f) && getDir().dot(dir.normal()) > COS60) {
                         pickupListCount = 0;
                         game->invShow(camera->cameraIndex, Inventory::PAGE_SAVEGAME, i);
                         return true;
@@ -4079,7 +4080,7 @@ struct Lara : Character {
     bool hideHead()
     {
         //Not sure about this..
-        if (state == STATE_BACK_JUMP || state == STATE_LEFT_JUMP || state == STATE_RIGHT_JUMP)
+        if (state == STATE_BACK_JUMP || state == STATE_LEFT_JUMP || state == STATE_RIGHT_JUMP || state == STATE_HANDSTAND || state == STATE_SWAN_DIVE)
             return false;
 
         if (Core::pass != Core::passShadow && camera->firstPerson && camera->viewIndex == -1 && game->getCamera() == camera)
