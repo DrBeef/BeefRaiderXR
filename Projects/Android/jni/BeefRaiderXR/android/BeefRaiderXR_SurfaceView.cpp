@@ -939,7 +939,7 @@ void VR_HandleControllerInput() {
     }
 
     bool twoHandShotgun = false;
-    if (lara)
+    if (lara && !inventory->isActive())
     {
         if (lara->emptyHands())
         {
@@ -999,9 +999,9 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
+    if ((!inventory->isActive()&& rightTrackedRemoteState_new.GripTrigger > 0.4f &&
               rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
-             (inventory->isActive() && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
+             ((inventory->isActive() || inventory->phaseRing > 0.f) && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
               rightTrackedRemoteState_old.GripTrigger > 0.4f))
     {
         inventory->toggle(0, Inventory::PAGE_INVENTORY);
@@ -1016,10 +1016,11 @@ void VR_HandleControllerInput() {
     {
         if (!inventory->isActive())
         {
-            if (leftTrackedRemoteState_new.Buttons & xrButton_X)
+            if (lara && lara->canSaveGame() && leftTrackedRemoteState_new.Buttons & xrButton_X)
             {
-                Game::quickSave();
-                //inventory->toggle(0, Inventory::PAGE_SAVEGAME);
+                //Ensure the Lara entity isn't destroyed!
+                inventory->quicksave = true;
+                inventory->toggle(0, Inventory::PAGE_SAVEGAME);
                 allowSaveLoad = false;
             }
             else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
@@ -1032,12 +1033,12 @@ void VR_HandleControllerInput() {
 
     if (cheatsEnabled)
     {
-        //Toggle speed up the game if right thumbrest is touched
         static bool fast = false;
         Input::setDown(ikT, fast);
-        if ((rightTrackedRemoteState_new.Touches & xrButton_ThumbRest) && !(rightTrackedRemoteState_old.Touches & xrButton_ThumbRest))
+
+        if (lara && (rightTrackedRemoteState_new.Touches & xrButton_ThumbRest) && !(rightTrackedRemoteState_old.Touches & xrButton_ThumbRest))
         {
-            fast = !fast;
+            lara->camera->changeView(!lara->camera->firstPerson);
         }
 
         if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
@@ -1076,6 +1077,8 @@ void VR_HandleControllerInput() {
                     }
                     else if (quadrant == 3)
                     {
+                        //Toggle speed up the game if right thumbrest is touched
+                        fast = !fast;
                     }
 
                     allowToggleCheat = false;
