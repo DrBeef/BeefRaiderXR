@@ -79,7 +79,9 @@ struct Camera : ICamera {
 
         lookAngle = vec3(0.0f);
 
-        changeView(false);
+        //Default to first person for now
+        changeView(true);
+
         if (level->isCutsceneLevel()) {
             mode = MODE_CUTSCENE;
 //            room  = level->entities[level->cutEntity].room;
