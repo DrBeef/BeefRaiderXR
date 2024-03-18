@@ -1388,8 +1388,8 @@ void TBXR_InitialiseResolution()
 	free(viewportConfigurationTypes);
 
 	//Shortcut to width and height
-	gAppState.Width = gAppState.ViewConfigurationView[0].recommendedImageRectWidth;
-	gAppState.Height = gAppState.ViewConfigurationView[0].recommendedImageRectHeight;
+	gAppState.Width = gAppState.ViewConfigurationView[0].recommendedImageRectWidth * SS_MULTIPLIER;
+	gAppState.Height = gAppState.ViewConfigurationView[0].recommendedImageRectHeight * SS_MULTIPLIER;
 }
 
 void TBXR_EnterVR( ) {
