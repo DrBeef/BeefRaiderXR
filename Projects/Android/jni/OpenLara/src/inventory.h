@@ -260,6 +260,8 @@ struct Inventory {
     int     itemsCount;
     int     playerIndex;
 
+    bool    quicksave;
+
     float       titleTimer;
     float       changeTimer;
     TR::LevelID nextLevel; // toggle result
@@ -659,6 +661,7 @@ struct Inventory {
         clear();
         active      = false;
         chosen      = false;
+        quicksave   = false;
         index       = targetIndex = 0;
         page        = targetPage = PAGE_OPTION;
 
@@ -1249,12 +1252,13 @@ struct Inventory {
 
             if (key == cAction) {
                 if (slot == 1) {
-                    if (index > -1) {
+                    if (index > -1 && !quicksave) {
                         TR::Entity &e = game->getLevel()->entities[index];
                         Controller *controller = (Controller*)e.controller;
                         controller->deactivate(true);
                     }
-                    game->saveGame(game->getLevel()->id, index > -1, false);
+                    game->saveGame(game->getLevel()->id, quicksave || index > -1, false);
+                    quicksave = false;
                 }
                 toggle(playerIndex, targetPage);
             }
@@ -1775,8 +1779,8 @@ struct Inventory {
             Core::mModel.scale(vec3(1.0f / 32767.0f));
         #endif
 
-        short o_frame = 32767;
-        short i_frame = 16384;
+        short o_frame = 4096;
+        short i_frame = 2560;
 
         short2 size = short2(short(i_frame * aspectImg), i_frame);
         if (aspectImg < 1.0f) {
@@ -1826,10 +1830,20 @@ struct Inventory {
         short2 t0(short(tx * 32767), short(ty * 32767));
         short2 t1(t0.x + short(ax * 32767), t0.y + short(ay * 32767));
 
-        vertices[ 0].texCoord = short4(t0.x, t0.y, 0, 0);
-        vertices[ 1].texCoord = short4(t1.x, t0.y, 0, 0);
-        vertices[ 2].texCoord = short4(t1.x, t1.y, 0, 0);
-        vertices[ 3].texCoord = short4(t0.x, t1.y, 0, 0);
+        if (!video)
+        {
+            vertices[3].texCoord = short4(t0.x, t0.y, 0, 0);
+            vertices[2].texCoord = short4(t1.x, t0.y, 0, 0);
+            vertices[1].texCoord = short4(t1.x, t1.y, 0, 0);
+            vertices[0].texCoord = short4(t0.x, t1.y, 0, 0);
+        }
+        else
+        {
+            vertices[0].texCoord = short4(t0.x, t0.y, 0, 0);
+            vertices[1].texCoord = short4(t1.x, t0.y, 0, 0);
+            vertices[2].texCoord = short4(t1.x, t1.y, 0, 0);
+            vertices[3].texCoord = short4(t0.x, t1.y, 0, 0);
+        }
         vertices[ 4].texCoord =
         vertices[ 5].texCoord =
         vertices[ 6].texCoord =
@@ -1839,20 +1853,46 @@ struct Inventory {
         vertices[10].texCoord =
         vertices[11].texCoord = short4(0, 0, 0, 0);
 
-        if ((Core::settings.detail.stereo == Core::Settings::STEREO_VR && !video) || !background[0]) {
+        if (!video && !background[0]) {
             Core::blackTex->bind(sDiffuse); // black background
         } else {
             background[0]->bind(sDiffuse);
         }
 
         Core::setBlendMode(alpha < 255 ? bmAlpha : bmNone);
+        Core::setCullMode(cmNone);
 
-        mat4 mProj, mView;
-        mView.identity();
-        mProj = GAPI::ortho(-1, +1, -1, +1, 0, 1);
-        mProj.scale(vec3(1.0f / max(size.x, size.y)));
-        mProj.translate(vec3(eye, 0.0f, 0.0f));
-        Core::setViewProj(mView, mProj);
+        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR && !video) {
+            if (head.e00 == INF)
+            {
+                mat4 h;
+                h.identity();
+                vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
+                h.rotateY(-ang.y);
+                h.setPos(Input::hmd.body.getPos());
+                head = h.inverseOrtho();
+            }
+            vec3 pos = vec3(0, 0, -4096);
+
+            Core::mViewInv = mat4(pos, pos + vec3(0, 0, 1), vec3(0, -1, 0));
+            Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];
+
+            Core::mProj = Input::hmd.proj[Core::eye == -1.0f ? 0 : 1];
+
+            Core::mView   = Core::mViewInv.inverseOrtho();
+            Core::viewPos = Core::mViewInv.getPos();
+
+            Core::setViewProj(Core::mView, Core::mProj);
+        }
+        else
+        {
+            mat4 mProj, mView;
+            mView.identity();
+            mProj = GAPI::ortho(-1, +1, -1, +1, 0, 1);
+            mProj.scale(vec3(1.0f / max(size.x, size.y)));
+            mProj.translate(vec3(eye, 0.0f, 0.0f));
+            Core::setViewProj(mView, mProj);
+        }
 
         game->setShader(Core::passFilter, Shader::FILTER_UPSCALE, false, false);
         Core::active.shader->setParam(uParam, vec4(float(Core::active.textures[sDiffuse]->width), float(Core::active.textures[sDiffuse]->height), 0.0f, 0.0f));
@@ -1968,7 +2008,14 @@ struct Inventory {
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
             if (head.e00 == INF)
-                head = Input::hmd.body.inverseOrtho();
+            {
+                mat4 h;
+                h.identity();
+                vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
+                h.rotateY(-ang.y);
+                h.setPos(Input::hmd.body.getPos());
+                head = h.inverseOrtho();
+            }
             Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];
         } else
             head.e00 = INF;

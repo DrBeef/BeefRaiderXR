@@ -781,7 +781,7 @@ struct Controller {
         return getEntity().isActor() ? getJoint(0).pos : pos;
     }
 
-    vec3 getAngleAbs(const vec3 &dir) const {
+    static vec3 getAngleAbs(const vec3 &dir) {
         return vec3(-atan2f(dir.y, sqrtf(dir.x * dir.x + dir.z * dir.z)), -atan2f(dir.x, dir.z), 0.0f);
     }
 
