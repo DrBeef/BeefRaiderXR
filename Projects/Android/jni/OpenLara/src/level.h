@@ -3270,7 +3270,7 @@ struct Level : IGame {
 
             if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
                 if (lara && lara->camera && !lara->camera->firstPerson) {
-                    lara->camera->changeView(true);
+                    //lara->camera->changeView(true);
                 }
             }
 
@@ -3355,7 +3355,10 @@ struct Level : IGame {
 
         Core::pushLights();
 
-        UI::begin(camera->aspect);
+        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
+            UI::beginVR(camera->aspect);
+        else
+            UI::begin(camera->aspect);
 
         atlasObjects->bind(sDiffuse);
         UI::renderPickups();
@@ -3378,7 +3381,7 @@ struct Level : IGame {
 
             vec2 pos;
             if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
-                pos = vec2((UI::width - size.x) * 0.5f, 96);
+                pos = vec2((UI::width - size.x) * 0.5f, -440);
             else
                 pos = vec2(UI::width - 32 - size.x, 32);
 

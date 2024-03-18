@@ -29,6 +29,7 @@ namespace UI {
     int      subsPartLength;
     int      subsPos;
     int      subsLength;
+    mat4     head;
 
     StringID hintStr;
     StringID subsStr;
@@ -262,6 +263,59 @@ namespace UI {
         uint16 curTile, curClut;
     #endif
 
+
+    void beginVR(float aspect, bool ui = false) {
+        vec3 pos = vec3(0, 0, -486);
+
+        if (ui) {
+            pos.x += UI::width * 0.5f;
+            pos.y += UI::height * 0.5f;
+            pos.z += 1024.0f;
+        }
+
+        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
+            pos.z -= 256.0f;
+
+        Core::mViewInv = mat4(pos, pos + vec3(0, 0, 1), vec3(0, -1, 0));
+
+        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
+            if (head.e00 == INF)
+            {
+                mat4 h;
+                h.identity();
+                vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
+                h.rotateY(-ang.y);
+                h.setPos(Input::hmd.body.getPos());
+                head = h.inverseOrtho();
+            }
+            Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];
+        }
+
+        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
+            Core::mProj = Input::hmd.proj[Core::eye == -1.0f ? 0 : 1];
+        }
+
+        Core::mView   = Core::mViewInv.inverseOrtho();
+        Core::viewPos = Core::mViewInv.getPos();
+
+        Core::setViewProj(Core::mView, Core::mProj);
+
+        Core::setDepthTest(false);
+        Core::setDepthWrite(false);
+        Core::setBlendMode(bmPremult);
+        Core::setCullMode(cmNone);
+        game->setupBinding();
+
+        game->setShader(Core::passGUI, Shader::DEFAULT);
+        Core::setMaterial(1, 1, 1, 1);
+
+        game->getMesh()->dynBegin();
+
+#ifdef SPLIT_BY_TILE
+        curTile = curClut = 0xFFFF;
+#endif
+    }
+
     void begin(float aspect) {
         ensureLanguage(Core::settings.audio.language);
 
@@ -295,6 +349,8 @@ namespace UI {
         Core::setBlendMode(bmNone);
         Core::setDepthTest(true);
         Core::setDepthWrite(true);
+
+        head.e00 = INF;
     }
 
     enum ShadeType {
