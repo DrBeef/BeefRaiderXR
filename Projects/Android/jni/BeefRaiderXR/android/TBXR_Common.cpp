@@ -22,6 +22,10 @@
 //#include <GLES/gl2ext.h>
 
 
+
+#define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
+#define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))
+
 #include "VrInput.h"
 #include "VrCommon.h"
 

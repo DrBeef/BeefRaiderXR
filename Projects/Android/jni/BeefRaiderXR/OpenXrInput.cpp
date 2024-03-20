@@ -2,7 +2,6 @@
 #include "VrCvars.h"
 #include <string>
 #include <cstring>
-#include <sys/time.h>
 #include <map>
 
 extern ovrApp gAppState;
@@ -20,7 +19,7 @@ XrResult CheckXrResult(XrResult res, const char* originator) {
 #define SIDE_RIGHT 1
 #define SIDE_COUNT 2
 
-XrActionSet actionSet = nullptr;
+XrActionSet actionSet;
 XrAction grabAction;
 XrAction gripAction;
 XrAction vibrateAction;
@@ -75,31 +74,7 @@ XrPath handSubactionPath[SIDE_COUNT];
 XrSpace handSpace[SIDE_COUNT];
 
 
-/*
-================
-Sys_Milliseconds
-================
-*/
-unsigned long sys_timeBase = 0;
-int curtime;
-int Sys_Milliseconds ()
-{
-	struct timeval tp;
-
-	gettimeofday(&tp, NULL);
-
-	if (!sys_timeBase)
-	{
-		sys_timeBase = tp.tv_sec;
-		return tp.tv_usec/1000;
-	}
-
-	curtime = (tp.tv_sec - sys_timeBase)*1000 + tp.tv_usec/1000;
-
-    static int sys_timeBase = curtime;
-	curtime -= sys_timeBase;
-	return curtime;
-}
+int osGetTimeMS();
 
 std::map<std::string, cvar_t*> cvarMap;
 
@@ -1097,7 +1072,7 @@ void TBXR_Vibrate( int duration, int chan, float intensity )
 
 void TBXR_ProcessHaptics() {
     static float lastFrameTime = 0.0f;
-    float timestamp = (float)(Sys_Milliseconds( ));
+    float timestamp = (float)(osGetTimeMS());
     float frametime = timestamp - lastFrameTime;
     lastFrameTime = timestamp;
 

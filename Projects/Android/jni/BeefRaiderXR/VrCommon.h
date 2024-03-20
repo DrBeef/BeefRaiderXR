@@ -5,8 +5,6 @@
 #define YAW                 1       // left / right
 #define ROLL                2       // fall over
 
-#define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
-#define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))
 
 struct cvar_t {
 	const char* name;
@@ -48,9 +46,7 @@ extern int ducked;
 extern vr_client_info_t vr;
 
 float length(float x, float y);
-float nonLinearFilter(float in);
 bool between(float min, float val, float max);
-void rotateAboutOrigin(float v1, float v2, float rotation, vec2_t out);
 void QuatToYawPitchRoll(XrQuaternionf q, vec3_t rotation, vec3_t out);
 void handleTrackedControllerButton(ovrInputStateTrackedRemote * trackedRemoteState, ovrInputStateTrackedRemote * prevTrackedRemoteState, uint32_t button, int key);
 

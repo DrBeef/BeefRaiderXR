@@ -13,7 +13,8 @@
     #elif defined(_OS_3DS)
         #define debugBreak() svcBreak(USERBREAK_ASSERT); 
     #else
-        #define debugBreak() _asm { int 3 }
+//        #define debugBreak() _asm { int 3 }
+        #define debugBreak()
     #endif
 
     #define ASSERT(expr) if (expr) {} else { LOG("ASSERT:\n  %s:%d\n  %s => %s\n", __FILE__, __LINE__, __FUNCTION__, #expr); debugBreak(); }

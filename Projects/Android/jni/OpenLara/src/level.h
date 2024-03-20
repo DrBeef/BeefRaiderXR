@@ -3277,6 +3277,7 @@ struct Level : IGame {
             renderEye(-1, showUI, invBG);
             renderEye(+1, showUI, invBG);
 
+            /*
         #ifdef _OS_WIN
             uint8 stereo = Core::settings.detail.stereo;
             Core::settings.detail.stereo = Core::Settings::STEREO_OFF;
@@ -3294,6 +3295,7 @@ struct Level : IGame {
                 lara->camera->spectatorVR = false;
             }
         #endif
+        */
         }  else {
             renderEye(int(Core::eye), showUI, invBG);
         }

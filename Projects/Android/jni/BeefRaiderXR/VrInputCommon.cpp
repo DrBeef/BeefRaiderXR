@@ -36,39 +36,9 @@ void handleTrackedControllerButton(ovrInputStateTrackedRemote * trackedRemoteSta
     }
 }
 
-void rotateAboutOrigin(float x, float y, float rotation, vec2_t out)
-{
-    out[0] = cosf(DEG2RAD(-rotation)) * x  +  sinf(DEG2RAD(-rotation)) * y;
-    out[1] = cosf(DEG2RAD(-rotation)) * y  -  sinf(DEG2RAD(-rotation)) * x;
-}
-
 float length(float x, float y)
 {
     return sqrtf(powf(x, 2.0f) + powf(y, 2.0f));
-}
-
-#define NLF_DEADZONE 0.1
-#define NLF_POWER 2.2
-
-float nonLinearFilter(float in)
-{
-    float val = 0.0f;
-    if (in > NLF_DEADZONE)
-    {
-        val = in > 1.0f ? 1.0f : in;
-        val -= NLF_DEADZONE;
-        val /= (1.0f - NLF_DEADZONE);
-        val = powf(val, NLF_POWER);
-    }
-    else if (in < -NLF_DEADZONE)
-    {
-        val = in < -1.0f ? -1.0f : in;
-        val += NLF_DEADZONE;
-        val /= (1.0f - NLF_DEADZONE);
-        val = -powf(fabsf(val), NLF_POWER);
-    }
-
-    return val;
 }
 
 void sendButtonActionSimple(const char* action)

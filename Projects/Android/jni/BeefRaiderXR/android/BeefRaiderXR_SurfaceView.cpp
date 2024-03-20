@@ -59,6 +59,32 @@ void osToggleVR(bool enable)
 
 int osStartTime = 0;
 
+/*
+================
+Sys_Milliseconds
+================
+*/
+unsigned long sys_timeBase = 0;
+int curtime;
+int Sys_Milliseconds ()
+{
+    struct timeval tp;
+
+    gettimeofday(&tp, NULL);
+
+    if (!sys_timeBase)
+    {
+        sys_timeBase = tp.tv_sec;
+        return tp.tv_usec/1000;
+    }
+
+    curtime = (tp.tv_sec - sys_timeBase)*1000 + tp.tv_usec/1000;
+
+    static int sys_timeBase = curtime;
+    curtime -= sys_timeBase;
+    return curtime;
+}
+
 int   osGetTimeMS()
 {
     return int(Sys_Milliseconds ()) - osStartTime;
@@ -297,12 +323,13 @@ void VR_SetHMDOrientation(float pitch, float yaw, float roll)
 void VR_SetHMDPosition(float x, float y, float z )
 {
 	static bool s_useScreen = false;
+	static int frame = 0;
 
 	VectorSet(vr.hmdposition, x, y, z);
 
 	//Can be set elsewhere
 	vr.take_snap |= s_useScreen != VR_UseScreenLayer();
-	if (vr.take_snap)
+	if (vr.take_snap || (frame++ < 100))
     {
 		s_useScreen = VR_UseScreenLayer();
 
@@ -1033,8 +1060,9 @@ void VR_HandleControllerInput() {
 
     if (cheatsEnabled)
     {
-        static bool fast = false;
-        Input::setDown(ikT, fast);
+        static int speed = 0;
+        Input::setDown(ikT, speed & 1);
+        Input::setDown(ikR, speed & 2);
 
         if (lara && (rightTrackedRemoteState_new.Touches & xrButton_ThumbRest) && !(rightTrackedRemoteState_old.Touches & xrButton_ThumbRest))
         {
@@ -1077,8 +1105,9 @@ void VR_HandleControllerInput() {
                     }
                     else if (quadrant == 3)
                     {
-                        //Toggle speed up the game if right thumbrest is touched
-                        fast = !fast;
+                        //cycle through speeds
+                        speed++;
+                        if (speed == 3) speed = 0;
                     }
 
                     allowToggleCheat = false;

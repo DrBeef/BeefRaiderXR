@@ -1,0 +1,1351 @@
+#include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include "VrInput.h"
+#include "VrCvars.h"
+
+#include <game.h>
+
+bool cheatsEnabled = false;
+bool isDemo = false;
+
+/*
+================================================================================
+
+OpenLara Stuff
+
+================================================================================
+*/
+
+void VR_Init();
+void osToggleVR(bool enable)
+{
+    //VR is always enabled
+    VR_Init();
+
+    Input::hmd.ready = true;
+
+}
+
+int osStartTime = 0;
+
+int osGetTimeMS() {
+#ifdef DEBUG
+    LARGE_INTEGER Freq, Count;
+    QueryPerformanceFrequency(&Freq);
+    QueryPerformanceCounter(&Count);
+    return int(Count.QuadPart * 1000L / Freq.QuadPart);
+#else
+    timeBeginPeriod(0);
+    return int(timeGetTime()) - osStartTime;
+#endif
+}
+
+bool  osJoyReady(int index)
+{
+    return true;
+}
+
+void  osJoyVibrate(int index, float L, float R)
+{
+    if (R > 0.f)
+        TBXR_Vibrate(100, 1, R);
+
+    if (L > 0.f)
+        TBXR_Vibrate(100, 2, L);
+}
+
+void osBeforeLoadNextLevel()
+{
+    //Level reset
+    Input::hmd.extrarot = 0.f;
+}
+
+
+// multi-threading
+void* osMutexInit() {
+    CRITICAL_SECTION* CS = new CRITICAL_SECTION();
+    InitializeCriticalSection(CS);
+    return CS;
+}
+
+void osMutexFree(void* obj) {
+    DeleteCriticalSection((CRITICAL_SECTION*)obj);
+    delete (CRITICAL_SECTION*)obj;
+}
+
+void osMutexLock(void* obj) {
+    EnterCriticalSection((CRITICAL_SECTION*)obj);
+}
+
+void osMutexUnlock(void* obj) {
+    LeaveCriticalSection((CRITICAL_SECTION*)obj);
+}
+
+// common input functions
+InputKey keyToInputKey(int code) {
+    static const int codes[] = {
+        VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN, VK_SPACE, VK_TAB, VK_RETURN, VK_ESCAPE, VK_SHIFT, VK_CONTROL, VK_MENU,
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+        VK_NUMPAD0, VK_NUMPAD1, VK_NUMPAD2, VK_NUMPAD3, VK_NUMPAD4, VK_NUMPAD5, VK_NUMPAD6, VK_NUMPAD7, VK_NUMPAD8, VK_NUMPAD9, VK_ADD, VK_SUBTRACT, VK_MULTIPLY, VK_DIVIDE, VK_DECIMAL,
+        VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_F11, VK_F12,
+        VK_OEM_MINUS, VK_OEM_PLUS, VK_OEM_4, VK_OEM_6, VK_OEM_2, VK_OEM_5, VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_3, VK_OEM_1, VK_OEM_7, VK_PRIOR, VK_NEXT, VK_HOME, VK_END, VK_DELETE, VK_INSERT, VK_BACK,
+    };
+
+    for (int i = 0; i < COUNT(codes); i++) {
+        if (codes[i] == code) {
+            return (InputKey)(ikLeft + i);
+        }
+    }
+    return ikNone;
+}
+
+// sound
+#define SND_SIZE 4704*2
+
+bool sndReady;
+char* sndData;
+HWAVEOUT waveOut;
+WAVEFORMATEX waveFmt = { WAVE_FORMAT_PCM, 2, 44100, 44100 * 4, 4, 16, sizeof(waveFmt) };
+WAVEHDR waveBuf[2];
+HANDLE  sndThread;
+HANDLE  sndSema;
+
+void sndFree() {
+    if (!sndReady) return;
+    sndReady = false;
+    ReleaseSemaphore(sndSema, 1, NULL);
+    WaitForSingleObject(sndThread, INFINITE);
+    CloseHandle(sndThread);
+    CloseHandle(sndSema);
+    waveOutUnprepareHeader(waveOut, &waveBuf[0], sizeof(WAVEHDR));
+    waveOutUnprepareHeader(waveOut, &waveBuf[1], sizeof(WAVEHDR));
+    waveOutReset(waveOut);
+    waveOutClose(waveOut);
+    delete[] sndData;
+}
+
+DWORD WINAPI sndPrep(void* arg) {
+    int idx = 0;
+    while (1) {
+        WaitForSingleObject(sndSema, INFINITE);
+        if (!sndReady) break;
+
+        WAVEHDR* hdr = waveBuf + idx;
+        waveOutUnprepareHeader(waveOut, hdr, sizeof(WAVEHDR));
+        Sound::fill((Sound::Frame*)hdr->lpData, SND_SIZE / 4);
+        waveOutPrepareHeader(waveOut, hdr, sizeof(WAVEHDR));
+        waveOutWrite(waveOut, hdr, sizeof(WAVEHDR));
+
+        idx ^= 1;
+    }
+    return 0;
+}
+
+void sndFill(HWAVEOUT waveOut, LPWAVEHDR waveBufPrev) {
+    if (!sndReady) return;
+    ReleaseSemaphore(sndSema, 1, NULL);
+}
+
+void sndInit(HWND hwnd) {
+    if (waveOutOpen(&waveOut, WAVE_MAPPER, &waveFmt, (INT_PTR)hwnd, 0, CALLBACK_WINDOW) == MMSYSERR_NOERROR) {
+        sndReady = true;
+        sndData = new char[SND_SIZE * 2];
+        memset(sndData, 0, SND_SIZE * 2);
+        memset(&waveBuf, 0, sizeof(waveBuf));
+        for (int i = 0; i < 2; i++) {
+            WAVEHDR* hdr = waveBuf + i;
+            hdr->dwBufferLength = SND_SIZE;
+            hdr->lpData = sndData + SND_SIZE * i;
+            waveOutPrepareHeader(waveOut, hdr, sizeof(WAVEHDR));
+            waveOutWrite(waveOut, hdr, sizeof(WAVEHDR));
+        }
+        sndSema = CreateSemaphore(NULL, 0, 2, NULL);
+        sndThread = CreateThread(NULL, 0, sndPrep, NULL, 0, NULL);
+    }
+    else {
+        sndReady = false;
+        sndData = NULL;
+    }
+}
+
+
+HWND hWnd;
+
+
+#ifdef _GAPI_SW
+HDC    hDC;
+
+void ContextCreate() {
+    hDC = GetDC(hWnd);
+}
+
+void ContextDelete() {
+    ReleaseDC(hWnd, hDC);
+    delete[] GAPI::swColor;
+}
+
+void ContextResize() {
+    delete[] GAPI::swColor;
+    GAPI::swColor = new GAPI::ColorSW[Core::width * Core::height];
+
+    GAPI::resize();
+}
+
+void ContextSwap() {
+    const BITMAPINFO bmi = { sizeof(BITMAPINFOHEADER), Core::width, -Core::height, 1, sizeof(GAPI::ColorSW) * 8, BI_RGB, 0, 0, 0, 0, 0 };
+    SetDIBitsToDevice(hDC, 0, 0, Core::width, Core::height, 0, 0, 0, Core::height, GAPI::swColor, &bmi, 0);
+}
+#elif _GAPI_GL
+HDC   hDC;
+HGLRC hRC;
+
+void ContextCreate() {
+    hDC = GetDC(hWnd);
+
+    PIXELFORMATDESCRIPTOR pfd;
+    memset(&pfd, 0, sizeof(pfd));
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.cColorBits = 32;
+    pfd.cRedBits = 8;
+    pfd.cGreenBits = 8;
+    pfd.cBlueBits = 8;
+    pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 8;
+
+    int format = ChoosePixelFormat(hDC, &pfd);
+    SetPixelFormat(hDC, format, &pfd);
+    hRC = wglCreateContext(hDC);
+    wglMakeCurrent(hDC, hRC);
+}
+
+void ContextDelete() {
+    wglMakeCurrent(0, 0);
+    wglDeleteContext(hRC);
+    ReleaseDC(hWnd, hDC);
+}
+
+void ContextResize() {}
+
+void ContextSwap() {
+    SwapBuffers(hDC);
+}
+#elif _GAPI_D3D9
+LPDIRECT3D9           D3D;
+LPDIRECT3DDEVICE9     device;
+D3DPRESENT_PARAMETERS d3dpp;
+
+void ContextCreate() {
+    memset(&d3dpp, 0, sizeof(d3dpp));
+    d3dpp.Windowed = TRUE;
+    d3dpp.BackBufferCount = 1;
+    d3dpp.BackBufferFormat = D3DFMT_A8R8G8B8;
+    d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    d3dpp.hDeviceWindow = hWnd;
+    d3dpp.EnableAutoDepthStencil = TRUE;
+    d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
+    d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+
+    if (!(D3D = Direct3DCreate9(D3D_SDK_VERSION))) {
+        LOG("! cant't initialize DirectX\n");
+        return;
+    }
+
+    if (!SUCCEEDED(D3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &d3dpp, &device)))
+        LOG("! can't create device\n");
+}
+
+void ContextDelete() {
+    GAPI::deinit();
+    if (device) device->Release();
+    if (D3D)    D3D->Release();
+}
+
+void ContextResize() {
+    if (Core::width <= 0 || Core::height <= 0)
+        return;
+    d3dpp.BackBufferWidth = Core::width;
+    d3dpp.BackBufferHeight = Core::height;
+    GAPI::resetDevice();
+}
+
+void ContextSwap() {
+    if (device->Present(NULL, NULL, NULL, NULL) == D3DERR_DEVICELOST)
+        GAPI::resetDevice();
+}
+#elif _GAPI_D3D11
+ID3D11Device* device;
+ID3D11DeviceContext* deviceContext;
+IDXGISwapChain* swapChain;
+
+void ContextCreate() {
+    DXGI_SWAP_CHAIN_DESC desc = { 0 };
+    desc.BufferCount = 2;
+    desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.BufferDesc.RefreshRate.Numerator = 60;
+    desc.BufferDesc.RefreshRate.Denominator = 1;
+    desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    desc.OutputWindow = hWnd;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Windowed = TRUE;
+    desc.OutputWindow = hWnd;
+
+    D3D_FEATURE_LEVEL featureLevels[] = {
+        D3D_FEATURE_LEVEL_11_0,
+        D3D_FEATURE_LEVEL_10_1,
+        D3D_FEATURE_LEVEL_10_0,
+    };
+
+    HRESULT ret;
+
+    ret = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION, &desc, &swapChain, &device, NULL, &deviceContext);
+    ASSERT(ret == S_OK);
+
+    GAPI::defRTV = NULL;
+    GAPI::defDSV = NULL;
+}
+
+void ContextDelete() {
+    GAPI::deinit();
+    SAFE_RELEASE(swapChain);
+    SAFE_RELEASE(deviceContext);
+    SAFE_RELEASE(device);
+}
+
+void ContextResize() {
+    if (Core::width <= 0 || Core::height <= 0)
+        return;
+
+    GAPI::resetDevice();
+
+    HRESULT ret = swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+    ASSERT(ret == S_OK);
+}
+
+void ContextSwap() {
+    HRESULT ret = swapChain->Present(Core::settings.detail.vsync ? 1 : 0, 0);
+}
+#endif
+
+#ifdef _NAPI_SOCKET
+char command[256];
+
+void parseCommand(char* cmd) {
+    NAPI::Peer peer;
+    int pos = 0;
+    for (int i = 0; i < strlen(cmd); i++)
+        if (cmd[i] == ':') {
+            cmd[i] = 0;
+            pos = i + 1;
+            break;
+        }
+    peer.ip = inet_addr(cmd);
+    peer.port = htons(atoi(&cmd[pos]));
+    cmd[pos - 1] = ':';
+
+    LOG("join %s:%d\n", inet_ntoa(*(in_addr*)&peer.ip), ntohs(peer.port));
+    Network::joinGame(peer);
+}
+#endif
+
+int checkLanguage() {
+    LANGID id = GetUserDefaultUILanguage() & 0xFF;
+    int str = STR_LANG_EN;
+    switch (id) {
+    case LANG_ENGLISH: str = STR_LANG_EN; break;
+    case LANG_FRENCH: str = STR_LANG_FR; break;
+    case LANG_GERMAN: str = STR_LANG_DE; break;
+    case LANG_SPANISH: str = STR_LANG_ES; break;
+    case LANG_ITALIAN: str = STR_LANG_IT; break;
+    case LANG_POLISH: str = STR_LANG_PL; break;
+    case LANG_PORTUGUESE: str = STR_LANG_PT; break;
+    case LANG_RUSSIAN:
+    case LANG_UKRAINIAN:
+    case LANG_BELARUSIAN: str = STR_LANG_RU; break;
+    case LANG_JAPANESE: str = STR_LANG_JA; break;
+    case LANG_GREEK: str = STR_LANG_GR; break;
+    case LANG_FINNISH: str = STR_LANG_FI; break;
+    case LANG_CZECH: str = STR_LANG_CZ; break;
+    case LANG_CHINESE: str = STR_LANG_CN; break;
+    }
+    return str - STR_LANG_EN;
+}
+
+static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        // window
+    case WM_ACTIVATE:
+        break;
+    case WM_SIZE:
+        Core::width = LOWORD(lParam);
+        Core::height = HIWORD(lParam);
+        ContextResize();
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+        // keyboard
+    case WM_CHAR:
+    case WM_SYSCHAR:
+#ifdef _NAPI_SOCKET
+        if (wParam == VK_RETURN) {
+            parseCommand(command);
+            //command[0] = 0;
+        }
+        else if ((wParam >= '0' && wParam <= '9') || wParam == ':' || wParam == '.') {
+            int len = strlen(command);
+            command[len] = wParam;
+            command[len + 1] = 0;
+        }
+        else if (wParam == 8) {
+            int len = strlen(command);
+            if (len > 0)
+                command[len - 1] = 0;
+        }
+#endif
+        break;
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYDOWN:
+    case WM_SYSKEYUP:
+        if (msg == WM_SYSKEYDOWN && wParam == VK_RETURN) { // Alt + Enter - switch to fullscreen or window
+            static WINDOWPLACEMENT pLast;
+            DWORD style = GetWindowLong(hWnd, GWL_STYLE);
+            if (style & WS_OVERLAPPEDWINDOW) {
+                MONITORINFO mInfo = { sizeof(mInfo) };
+                if (GetWindowPlacement(hWnd, &pLast) && GetMonitorInfo(MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY), &mInfo)) {
+                    RECT& r = mInfo.rcMonitor;
+                    SetWindowLong(hWnd, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
+                    MoveWindow(hWnd, r.left, r.top, r.right - r.left, r.bottom - r.top, FALSE);
+                }
+            }
+            else {
+                SetWindowLong(hWnd, GWL_STYLE, style | WS_OVERLAPPEDWINDOW);
+                SetWindowPlacement(hWnd, &pLast);
+            }
+            break;
+        }
+        if (msg == WM_SYSKEYDOWN && wParam == VK_F4) { // Alt + F4 - close application
+            Core::quit();
+            break;
+        }
+        Input::setDown(keyToInputKey(wParam), msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+        break;
+        // sound
+    case MM_WOM_DONE:
+        sndFill((HWAVEOUT)wParam, (WAVEHDR*)lParam);
+        break;
+    default:
+        return DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+    return 0;
+}
+
+/*
+================================================================================
+
+BeefRaiderXR Stuff
+
+================================================================================
+*/
+
+bool VR_UseScreenLayer()
+{
+	vr.using_screen_layer = inventory->video;
+
+	return vr.using_screen_layer;
+}
+
+float VR_GetScreenLayerDistance()
+{
+	return (2.0f + vr_screen_dist->value);
+}
+
+
+void VR_SetHMDOrientation(float pitch, float yaw, float roll)
+{
+	//Orientation
+	VectorSet(vr.hmdorientation, pitch, yaw, roll);
+	VectorSubtract(vr.hmdorientation_last, vr.hmdorientation, vr.hmdorientation_delta);
+
+	//Keep this for our records
+	VectorCopy(vr.hmdorientation, vr.hmdorientation_last);
+
+	if (!vr.third_person && !vr.remote_npc && !vr.remote_turret && !vr.cgzoommode)
+	{
+		VectorCopy(vr.hmdorientation, vr.hmdorientation_first);
+	}
+
+	if (!vr.remote_turret && !vr.cgzoommode)
+	{
+		VectorCopy(vr.weaponangles[ANGLES_ADJUSTED], vr.weaponangles_first[ANGLES_ADJUSTED]);
+	}
+
+	// View yaw delta
+	float clientview_yaw = vr.clientviewangles[YAW] - vr.hmdorientation[YAW];
+	vr.clientview_yaw_delta = vr.clientview_yaw_last - clientview_yaw;
+	vr.clientview_yaw_last = clientview_yaw;
+
+	// Max-height is set only once on start, or after re-calibration
+	// (ignore too low value which is sometimes provided on start)
+	if (!vr.maxHeight || vr.maxHeight < 1.0) {
+		vr.maxHeight = vr.hmdposition[1];
+	}
+
+	//GB Instantiate initial velocity
+	if(!vr.tempWeaponVelocity)
+	{
+		vr.tempWeaponVelocity = 400.0f;
+	}
+
+	vr.curHeight = vr.hmdposition[1];
+}
+
+void VR_SetHMDPosition(float x, float y, float z )
+{
+	static bool s_useScreen = false;
+	static int frame = 0;
+
+	VectorSet(vr.hmdposition, x, y, z);
+
+	//Can be set elsewhere
+	vr.take_snap |= s_useScreen != VR_UseScreenLayer();
+	if (vr.take_snap || (frame++ < 100))
+    {
+		s_useScreen = VR_UseScreenLayer();
+
+		//Record player position on transition
+		VectorSet(vr.hmdposition_snap, x, y, z);
+		VectorCopy(vr.hmdorientation, vr.hmdorientation_snap);
+		if (vr.cin_camera)
+		{
+			//Reset snap turn too if in a cinematic
+			Input::hmd.extrarot = 0;
+		}
+		vr.take_snap = false;
+    }
+
+	VectorSubtract(vr.hmdposition, vr.hmdposition_snap, vr.hmdposition_offset);
+
+	//Position
+	VectorSubtract(vr.hmdposition_last, vr.hmdposition, vr.hmdposition_delta);
+
+	//Keep this for our records
+	VectorCopy(vr.hmdposition, vr.hmdposition_last);
+}
+
+static bool forceUpdatePose = false;
+
+void VR_Init()
+{
+	//GlInitExtensions();
+
+	//First - all the OpenXR stuff and nonsense
+	TBXR_InitialiseOpenXR();
+	TBXR_EnterVR();
+	TBXR_InitRenderer();
+	TBXR_InitActions();
+	TBXR_WaitForSessionActive();
+
+	//Initialise all our variables
+	remote_movementSideways = 0.0f;
+	remote_movementForward = 0.0f;
+	remote_movementUp = 0.0f;
+	positional_movementSideways = 0.0f;
+	positional_movementForward = 0.0f;
+	Input::hmd.extrarot = 0.0f;
+	vr.immersive_cinematics = true;
+	vr.move_speed = 1; // Default to full speed now
+
+	//init randomiser
+	srand(time(NULL));
+
+	//Create Cvars
+	vr_turn_mode = Cvar_Get( "vr_turn_mode", "0", CVAR_ARCHIVE); // 0 = snap, 1 = smooth
+	vr_turn_angle = Cvar_Get( "vr_turn_angle", "45", CVAR_ARCHIVE);
+	vr_positional_factor = Cvar_Get( "vr_positional_factor", "12", CVAR_ARCHIVE);
+    vr_walkdirection = Cvar_Get( "vr_walkdirection", "1", CVAR_ARCHIVE);
+	vr_weapon_pitchadjust = Cvar_Get( "vr_weapon_pitchadjust", "-45.0", CVAR_ARCHIVE);
+    vr_virtual_stock = Cvar_Get( "vr_virtual_stock", "0", CVAR_ARCHIVE);
+
+    //Defaults
+	vr_control_scheme = Cvar_Get( "vr_control_scheme", "0", CVAR_ARCHIVE);
+	vr_switch_sticks = Cvar_Get( "vr_switch_sticks", "0", CVAR_ARCHIVE);
+
+	vr_immersive_cinematics = Cvar_Get("vr_immersive_cinematics", "1", CVAR_ARCHIVE);
+	vr_screen_dist = Cvar_Get( "vr_screen_dist", "3.5", CVAR_ARCHIVE);
+	vr_weapon_velocity_trigger = Cvar_Get( "vr_weapon_velocity_trigger", "2.0", CVAR_ARCHIVE);
+	vr_scope_engage_distance = Cvar_Get( "vr_scope_engage_distance", "0.25", CVAR_ARCHIVE);
+	vr_force_velocity_trigger = Cvar_Get( "vr_force_velocity_trigger", "2.09", CVAR_ARCHIVE);
+	vr_force_distance_trigger = Cvar_Get( "vr_force_distance_trigger", "0.15", CVAR_ARCHIVE);
+    vr_two_handed_weapons = Cvar_Get ("vr_two_handed_weapons", "1", CVAR_ARCHIVE);
+	vr_force_motion_controlled = Cvar_Get ("vr_force_motion_controlled", "1", CVAR_ARCHIVE);
+	vr_force_motion_push = Cvar_Get ("vr_force_motion_push", "3", CVAR_ARCHIVE);
+	vr_force_motion_pull = Cvar_Get ("vr_force_motion_pull", "4", CVAR_ARCHIVE);
+	vr_motion_enable_saber = Cvar_Get ("vr_motion_enable_saber", "0", CVAR_ARCHIVE);
+	vr_always_run = Cvar_Get ("vr_always_run", "1", CVAR_ARCHIVE);
+	vr_crouch_toggle = Cvar_Get ("vr_crouch_toggle", "0", CVAR_ARCHIVE);
+	vr_irl_crouch_enabled = Cvar_Get ("vr_irl_crouch_enabled", "0", CVAR_ARCHIVE);
+	vr_irl_crouch_to_stand_ratio = Cvar_Get ("vr_irl_crouch_to_stand_ratio", "0.65", CVAR_ARCHIVE);
+	vr_saber_block_debounce_time = Cvar_Get ("vr_saber_block_debounce_time", "200", CVAR_ARCHIVE);
+	vr_haptic_intensity = Cvar_Get ("vr_haptic_intensity", "1.0", CVAR_ARCHIVE);
+	vr_comfort_vignette = Cvar_Get ("vr_comfort_vignette", "0.0", CVAR_ARCHIVE);
+	vr_saber_3rdperson_mode = Cvar_Get ("vr_saber_3rdperson_mode", "1", CVAR_ARCHIVE);
+	vr_vehicle_use_hmd_direction = Cvar_Get ("vr_vehicle_use_hmd_direction", "0", CVAR_ARCHIVE);
+	vr_vehicle_use_3rd_person = Cvar_Get ("vr_vehicle_use_3rd_person", "0", CVAR_ARCHIVE);
+	vr_vehicle_use_controller_for_speed = Cvar_Get ("vr_vehicle_use_controller_for_speed", "1", CVAR_ARCHIVE);
+	vr_gesture_triggered_use = Cvar_Get ("vr_gesture_triggered_use", "1", CVAR_ARCHIVE);
+	vr_use_gesture_boundary = Cvar_Get ("vr_use_gesture_boundary", "0.35", CVAR_ARCHIVE);
+	vr_align_weapons = Cvar_Get ("vr_align_weapons", "0", CVAR_ARCHIVE);
+	vr_refresh = Cvar_Get ("vr_refresh", "72", CVAR_ARCHIVE);
+	vr_super_sampling = Cvar_Get ("vr_super_sampling", "1.0", CVAR_ARCHIVE);
+
+    vr.menu_right_handed = vr_control_scheme->integer == 0;
+
+
+    int eyeW, eyeH;
+    TBXR_GetScreenRes(&eyeW, &eyeH);
+
+    Core::width  = eyeW;
+    Core::height = eyeH;
+
+    Core::eyeTex[0] = new Texture(eyeW, eyeH, 1, TexFormat::FMT_RGBA, OPT_TARGET);
+    Core::eyeTex[1] = new Texture(eyeW, eyeH, 1, TexFormat::FMT_RGBA, OPT_TARGET);
+
+    forceUpdatePose = true;
+	}
+
+
+
+bool VR_GetVRProjection(int eye, float zNear, float zFar, float zZoomX, float zZoomY, float* projection)
+{
+    XrFovf fov = gAppState.Views[eye].fov;
+    fov.angleLeft = atanf((tanf(fov.angleLeft) / zZoomX));
+    fov.angleRight = atanf((tanf(fov.angleRight) / zZoomX));
+    fov.angleUp = atanf((tanf(fov.angleUp) / zZoomY));
+    fov.angleDown = atanf((tanf(fov.angleDown) / zZoomY));
+
+    XrMatrix4x4f_CreateProjectionFov(
+            (XrMatrix4x4f*)projection, GRAPHICS_OPENGL,
+            fov, zNear, zFar);
+
+    return true;
+}
+/*
+mat4 convToMat4(const XrMatrix4x4f &m) {
+    return mat4(m.m[0], m.m[4], m.m[8], m.m[12],
+                m.m[1], m.m[5], m.m[9], m.m[13],
+                m.m[2], m.m[6], m.m[10], m.m[14],
+                m.m[3], m.m[7], m.m[11], m.m[15]);
+}
+*/
+mat4 convToMat4(const XrMatrix4x4f &m) {
+    return mat4(m.m[0], m.m[1], m.m[2], m.m[3],
+                m.m[4], m.m[5], m.m[6], m.m[7],
+                m.m[8], m.m[9], m.m[10], m.m[11],
+                m.m[12], m.m[13], m.m[14], m.m[15]);
+	}
+
+void VR_prepareEyeBuffer(int eye )
+{
+    //Bit of a fiddle really
+    ovrFramebuffer* frameBuffer = &(gAppState.Renderer.FrameBuffer[eye]);
+    Core::eyeTex[eye]->ID = frameBuffer->ColorSwapChainImage[frameBuffer->TextureSwapChainIndex].image;
+}
+
+int VR_SetRefreshRate(int refreshRate)
+{
+	return 0;
+}
+
+//All the stuff we want to do each frame specifically for this game
+void VR_FrameSetup()
+{
+	static float refresh = 0;
+
+    mat4 pL, pR;
+    VR_GetVRProjection(0, 8.0f, 45.0f * 1024.0f, 1.f, 1.f, (float *) &pL.e00);
+    VR_GetVRProjection(1, 8.0f, 45.0f * 1024.0f, 1.f, 1.f, (float *) &pR.e00);
+
+    vec3 vrPosition(gAppState.xfStageFromHead.position.x,
+                    gAppState.xfStageFromHead.position.y,
+                    gAppState.xfStageFromHead.position.z);
+    quat vrOrientation(gAppState.xfStageFromHead.orientation.x,
+                       gAppState.xfStageFromHead.orientation.y,
+                       gAppState.xfStageFromHead.orientation.z,
+                       gAppState.xfStageFromHead.orientation.w);
+
+    mat4 snapTurnMat;
+    snapTurnMat.identity();
+    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
+
+    mat4 head = snapTurnMat * mat4(vrOrientation, vec3(0));
+
+	if (refresh != vr_refresh->value)
+	{
+		refresh = vr_refresh->value;
+		VR_SetRefreshRate(vr_refresh->value);
+	}
+
+    if (leftTrackedRemoteState_new.Buttons & xrButton_LThumb)
+	{
+        forceUpdatePose = true;
+	}
+
+    if (Input::hmd.zero.x == INF || forceUpdatePose) {
+        Input::hmd.zero = vrPosition;
+        Input::hmd.head = head;
+        Input::hmd.head.setPos(vrPosition);
+
+        forceUpdatePose = false;
+	}
+
+    vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+	
+    Input::hmd.body = head; // direction body is facing
+    vec3 zero = Input::hmd.zero;
+    zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
+    Input::hmd.head.setPos(vrPosition - zero);
+
+    //Left eye
+    mat4 vL = head;
+    vL.setPos((Input::hmd.head.getPos() + (head.right().xyz() * (-0.065f / 2.f))) * ONE_METER);
+
+    //Right eye
+    mat4 vR = head;
+    vR.setPos((Input::hmd.head.getPos() + (head.right().xyz() * (0.065f / 2.f))) * ONE_METER);
+
+    Input::hmd.setView(pL, pR, vL, vR);
+}
+
+void VR_ExternalHapticEvent(const char* event, int position, int flags, int intensity, float angle, float yHeight )
+{
+}
+
+void VR_HapticUpdateEvent(const char* event, int intensity, float angle )
+{
+}
+
+void VR_HapticEndFrame()
+{
+}
+
+void VR_HapticStopEvent(const char* event)
+{
+}
+
+void VR_HapticEnable()
+{
+
+}
+
+void VR_HapticDisable()
+{
+}
+
+/*
+ *  event - name of event
+ *  position - for the use of external haptics providers to indicate which bit of haptic hardware should be triggered
+ *  flags - a way for the code to specify which controller to produce haptics on, if 0 then weaponFireChannel is calculated in this function
+ *  intensity - 0-100
+ *  angle - yaw angle (again for external haptics devices) to place the feedback correctly
+ *  yHeight - for external haptics devices to place the feedback correctly
+ */
+void VR_HapticEvent(const char* event, int position, int flags, int intensity, float angle, float yHeight )
+{
+	if (vr_haptic_intensity->value == 0.0f)
+	{
+		return;
+	}
+
+	//Pass on to any external services
+	VR_ExternalHapticEvent(event, position, flags, intensity, angle, yHeight);
+
+	float fIntensity = intensity / 100.0f;
+
+	//Controller Haptic Support
+	int weaponFireChannel = vr.weapon_stabilised ? 3 : (vr_control_scheme->integer ? 2 : 1);
+
+	if (flags != 0)
+	{
+		weaponFireChannel = flags;
+	}
+	if (strcmp(event, "pickup_shield") == 0 ||
+		strcmp(event, "pickup_weapon") == 0 ||
+		strstr(event, "pickup_item") != NULL)
+	{
+		TBXR_Vibrate(100, 3, 1.0);
+	}
+	else if (strcmp(event, "weapon_switch") == 0)
+	{
+		TBXR_Vibrate(250, vr_control_scheme->integer ? 2 : 1, 0.8);
+	}
+	else if (strcmp(event, "shotgun") == 0 || strcmp(event, "fireball") == 0)
+	{
+		TBXR_Vibrate(400, 3, fIntensity);
+	}
+	else if (strcmp(event, "bullet") == 0)
+	{
+		TBXR_Vibrate(150, 3, fIntensity);
+	}
+	else if (strcmp(event, "chainsaw_fire") == 0) // Saber
+	{
+		//Special handling for dual sabers / melee
+		if (vr.dualsabers)
+		{
+			if (position == 4 ||
+					position == 0) // both hands
+			{
+				weaponFireChannel = 3;
+			}
+			else if (position == 1) // left hand
+			{
+				weaponFireChannel = 2;
+			}
+			else if (position == 2) // right hand
+			{
+				weaponFireChannel = 1;
+			}
+			else
+			{
+				//no longer need to trigger haptic
+				return;
+			}
+		}
+
+		TBXR_Vibrate(300, weaponFireChannel, fIntensity);
+	}
+	else if (strcmp(event, "RTCWQuest:fire_tesla") == 0) // Weapon power build up
+	{
+		TBXR_Vibrate(500, weaponFireChannel, fIntensity);
+	}
+	else if (strcmp(event, "machinegun_fire") == 0 || strcmp(event, "plasmagun_fire") == 0)
+	{
+		TBXR_Vibrate(90, weaponFireChannel, fIntensity);
+	}
+	else if (strcmp(event, "shotgun_fire") == 0)
+	{
+		TBXR_Vibrate(250, weaponFireChannel, fIntensity);
+	}
+	else if (strcmp(event, "rocket_fire") == 0 ||
+			 strcmp(event, "RTCWQuest:fire_sniper") == 0 ||
+			 strcmp(event, "bfg_fire") == 0 ||
+			 strcmp(event, "handgrenade_fire") == 0 )
+	{
+		TBXR_Vibrate(400, weaponFireChannel, fIntensity);
+	}
+	else if (strcmp(event, "selector_icon") == 0 ||
+			 strcmp(event, "use_button") == 0 )
+	{
+		//Quick blip
+		TBXR_Vibrate(50, flags, fIntensity);
+	}
+}
+
+void VR_HandleControllerInput() {
+	TBXR_UpdateControllers();
+
+    bool usingSnapTurn = Core::settings.detail.turnmode == 0;
+
+    if (!inventory->isActive())
+	{
+        static int increaseSnap = true;
+        {
+            if (usingSnapTurn)
+            {
+                if (rightTrackedRemoteState_new.Joystick.x > 0.7f)
+                {
+                    if (increaseSnap)
+                    {
+                        Input::hmd.extrarot -= vr_turn_angle->value;
+                        increaseSnap = false;
+                        if (Input::hmd.extrarot < -180.0f)
+                        {
+                            Input::hmd.extrarot += 360.f;
+                        }
+                    }
+                }
+                else if (rightTrackedRemoteState_new.Joystick.x < 0.3f)
+                {
+                    increaseSnap = true;
+                }
+            }
+
+            static int decreaseSnap = true;
+            if (usingSnapTurn)
+            {
+                if (rightTrackedRemoteState_new.Joystick.x < -0.7f)
+                {
+                    if (decreaseSnap)
+                    {
+                        Input::hmd.extrarot += vr_turn_angle->value;
+                        decreaseSnap = false;
+
+                        if (Input::hmd.extrarot > 180.0f)
+                        {
+                            Input::hmd.extrarot -= 360.f;
+                        }
+                    }
+                }
+                else if (rightTrackedRemoteState_new.Joystick.x > -0.3f)
+                {
+                    decreaseSnap = true;
+                }
+            }
+
+            if (!usingSnapTurn && fabs(rightTrackedRemoteState_new.Joystick.x) > 0.1f) //smooth turn
+            {
+                Input::hmd.extrarot -= (Core::settings.detail.turnmode *
+                                rightTrackedRemoteState_new.Joystick.x);
+                if (Input::hmd.extrarot > 180.0f)
+                {
+                    Input::hmd.extrarot -= 360.f;
+                }
+            }
+        }
+    }
+
+    int joyRight = 0;
+    int joyLeft = 1;
+
+    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
+
+    Lara *lara = nullptr;
+    int laraState = -1;
+    if (!inventory->isActive() &&
+        inventory->game->getLara())
+    {
+        lara = (Lara*)inventory->game->getLara();
+        laraState = lara->state;
+
+        if (lara->camera->firstPerson)
+        {
+            static bool reversed = false;
+            if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)
+            {
+                if (!reversed &&
+                    lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
+                {
+                    Input::hmd.extrarot += 180.f;
+                    reversed = true;
+                }
+            }
+            else
+            {
+                reversed = false;
+            }
+        }
+	}
+
+    bool actionPressed = false;
+    if (!lara || lara->emptyHands())
+    {
+        //with empty hands left or right trigger is action
+        actionPressed = (leftTrackedRemoteState_new.IndexTrigger +
+                         rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
+    }
+
+    if (laraState == Lara::STATE_SWIM ||
+        laraState == Lara::STATE_TREAD ||
+        laraState == Lara::STATE_GLIDE)
+    {
+        Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
+        Input::hmd.head = Input::hmd.body;
+    }
+    // Once we're standing still or we've entered the walking or running state we then move in the direction the user
+    // is pressing the thumbstick like a modern game
+    else if (!actionPressed &&
+            (laraState == Lara::STATE_STOP ||
+              laraState == Lara::STATE_RUN ||
+              laraState == Lara::STATE_WALK ||
+              laraState == Lara::STATE_FORWARD_JUMP))
+    {
+        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+        //deadzone
+        if (joy.length() > 0.2f)
+        {
+            mat4 addMat;
+            addMat.identity();
+            float additionalDirAngle =
+                    atan2(joy.x,
+                          joy.y);
+            addMat.rotateY(-additionalDirAngle);
+            Input::hmd.head = addMat * Input::hmd.body;
+        }
+        else if (laraState == Lara::STATE_RUN ||
+                 laraState == Lara::STATE_WALK)
+        {
+            lara->animation.setAnim(Lara::ANIM_STAND);
+            lara->state = Lara::STATE_STOP;
+        }
+
+        Input::setJoyPos(joyRight, jkL, vec2(0, -joy.length()));
+    }
+    // If the user simply pressed the thumbstick in a particular direction that isn't forward
+    // after already executing another move (like jump), then
+    // we'll execute the move for that direction so treat it as a D pad
+    else if (!inventory->isActive())
+    {
+        //now adjust movement direction based on thumbstick direction
+        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+
+        //deadzone
+        if (joy.length() > 0.2f)
+        {
+            //Calculate which quandrant the thumbstick is pushed (UP/RIGHT/DOWN/LEFT) like a D pad
+            float angle = joy.quadrant() * 90.f;
+            joy.y = cosf(DEG2RAD * angle);
+            joy.x = sinf(DEG2RAD * angle);
+
+            Input::hmd.head = Input::hmd.body;
+        }
+
+        Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
+    }
+
+    if (laraState == Lara::STATE_STOP)
+    {
+        Input::hmd.head = Input::hmd.body;
+    }
+
+    vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
+                                  leftRemoteTracking_new.GripPose.position.y,
+                                  leftRemoteTracking_new.GripPose.position.z);
+
+    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
+                                     leftRemoteTracking_new.GripPose.orientation.y,
+                                     leftRemoteTracking_new.GripPose.orientation.z,
+                                     leftRemoteTracking_new.GripPose.orientation.w);
+
+    vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
+                                   rightRemoteTracking_new.GripPose.position.y,
+                                   rightRemoteTracking_new.GripPose.position.z);
+
+    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
+                                      rightRemoteTracking_new.GripPose.orientation.y,
+                                      rightRemoteTracking_new.GripPose.orientation.z,
+                                      rightRemoteTracking_new.GripPose.orientation.w);
+
+    //Inventory controls
+    static bool AButtonActive = true; // This is used to suppress an A button event when you come out of the inventory so you don't immediately jump
+    if (inventory->isActive() || inventory-> video)
+    {
+        Input::setJoyPos(joyRight, jkL, vec2((leftTrackedRemoteState_new.Joystick.x + rightTrackedRemoteState_new.Joystick.x), -(leftTrackedRemoteState_new.Joystick.y + rightTrackedRemoteState_new.Joystick.y)));
+        Input::setJoyDown(joyRight, jkA, AButtonActive && (rightTrackedRemoteState_new.Buttons & xrButton_A));
+        Input::setJoyDown(joyRight, jkSelect, (rightTrackedRemoteState_new.Buttons & xrButton_B) | (leftTrackedRemoteState_new.Buttons & xrButton_Y) | (leftTrackedRemoteState_new.Buttons & xrButton_Enter));
+        if (rightTrackedRemoteState_new.Buttons & xrButton_A)
+        {
+            //Button was pressed, so disable A until it is released again
+            AButtonActive = false;
+        }
+    }
+
+    if (!AButtonActive && !(rightTrackedRemoteState_new.Buttons & xrButton_A))
+    {
+        AButtonActive = true;
+    }
+
+    bool twoHandShotgun = false;
+    if (lara && !inventory->isActive())
+    {
+        if (lara->emptyHands())
+        {
+            //with empty hands left or right trigger is action
+            Input::setJoyDown(joyRight, jkA, (leftTrackedRemoteState_new.IndexTrigger +
+                                              rightTrackedRemoteState_new.IndexTrigger) > 0.4f ? 1 : 0);
+
+            //Walk
+            Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+        }
+        else
+        {
+            //The only time joyLeft is used is to indicate the firing of the left hand weapon
+            Input::setJoyDown(joyLeft, jkA, leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+            Input::setJoyDown(joyRight, jkA,
+                              rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+
+            //See if we should be trying to two hand the shotgun
+            /*        if (((Lara*)inventory->game->getLara())->wpnCurrent == TR::Entity::SHOTGUN)
+                    {
+                        vec3 dir = (Core::settings.detail.handedness == 0 ? vrRightControllerOrientation : vrLeftControllerOrientation) * vec3(0, 1, 0);
+                        if ((Core::settings.detail.handedness == 0 ? leftTrackedRemoteState_new.GripTrigger : rightTrackedRemoteState_new.GripTrigger) > 0.4f)// &&
+                            dir.dot((vrRightControllerPosition - vrLeftControllerPosition).normal()) > 0.5f)
+                        {
+                            twoHandShotgun = true;
+                        }
+                    }
+                    else */
+            {
+                //Walk
+                Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+            }
+        }
+
+        //Jump
+        Input::setJoyDown(joyRight, jkX, AButtonActive && (rightTrackedRemoteState_new.Buttons & xrButton_A));
+
+        //Holster/Unholster weapons
+        Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
+
+        //Roll - Reverse Direction - Right thumbstick click
+        Input::setJoyDown(joyRight, jkB, rightTrackedRemoteState_new.Buttons & xrButton_RThumb);
+    }
+
+    //Menu / Options
+    static bool allowOptions = false;
+    if (!allowOptions)
+    {
+        allowOptions = !((bool)(leftTrackedRemoteState_new.Buttons & xrButton_Enter));
+    }
+    else
+    {
+        if (leftTrackedRemoteState_new.Buttons & xrButton_Enter)
+        {
+            inventory->toggle(0, Inventory::PAGE_OPTION);
+            allowOptions = false;
+        }
+    }
+
+    if ((!inventory->isActive()&& rightTrackedRemoteState_new.GripTrigger > 0.4f &&
+              rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
+             ((inventory->isActive() || inventory->phaseRing > 0.f) && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
+              rightTrackedRemoteState_old.GripTrigger > 0.4f))
+    {
+        inventory->toggle(0, Inventory::PAGE_INVENTORY);
+    }
+
+    static bool allowSaveLoad = false;
+    if (!allowSaveLoad)
+    {
+        allowSaveLoad = !((bool)(leftTrackedRemoteState_new.Buttons & (xrButton_X|xrButton_Y)));
+    }
+    else
+    {
+        if (!inventory->isActive())
+        {
+            if (lara && lara->canSaveGame() && leftTrackedRemoteState_new.Buttons & xrButton_X)
+            {
+                //Ensure the Lara entity isn't destroyed!
+                inventory->quicksave = true;
+                inventory->toggle(0, Inventory::PAGE_SAVEGAME);
+                allowSaveLoad = false;
+            }
+            else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
+            {
+                inventory->toggle(0, Inventory::PAGE_OPTION, TR::Entity::INV_PASSPORT);
+                allowSaveLoad = false;
+            }
+        }
+    }
+
+    if (cheatsEnabled)
+    {
+        static int speed = 0;
+        Input::setDown(ikT, speed & 1);
+        Input::setDown(ikR, speed & 2);
+
+        if (lara && (rightTrackedRemoteState_new.Touches & xrButton_ThumbRest) && !(rightTrackedRemoteState_old.Touches & xrButton_ThumbRest))
+        {
+            lara->camera->changeView(!lara->camera->firstPerson);
+        }
+
+        if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
+        {
+            vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
+            int quadrant = rightJoy.quadrant();
+            static bool allowToggleCheat = false;
+            if (!allowToggleCheat)
+            {
+                if (rightJoy.length() < 0.2)
+                {
+                    allowToggleCheat = true;
+                }
+            }
+            else
+            {
+                if (rightJoy.length() > 0.2)
+                {
+                    if (quadrant == 0)
+                    {
+                        inventory->addWeapons();
+                        Game::level->playSound(TR::SND_SCREAM);
+                    }
+                    else if (quadrant == 1)
+                    {
+                        Game::level->loadNextLevel();
+                    }
+                    else if (quadrant == 2)
+                    {
+                        static bool dozy = true;
+                        Lara *lara = (Lara*)Game::level->getLara(0);
+                        if (lara) {
+                            lara->setDozy(dozy);
+                            dozy = !dozy;
+                        }
+                    }
+                    else if (quadrant == 3)
+                    {
+                        //cycle through speeds
+                        speed++;
+                        if (speed == 3) speed = 0;
+                    }
+
+                    allowToggleCheat = false;
+                }
+            }
+        }
+    }
+
+    float rotation = -vr_weapon_pitchadjust->value;
+    if (gAppState.controllersPresent == VIVE_CONTROLLERS)
+    {
+        rotation += -33.6718750f;
+    }
+
+    vrRightControllerPosition = vrRightControllerPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+
+    if (twoHandShotgun)
+    {
+        Basis basis = Basis(vrRightControllerPosition, vrLeftControllerPosition, vec3(1, 0, 0));
+        if (Core::settings.detail.handedness == 0)
+        {
+            vrRightControllerOrientation = basis.rot.conjugate();
+        }
+        else
+        {
+            vrLeftControllerOrientation = basis.rot;
+        }
+    }
+
+    mat4 snapTurnMat;
+    snapTurnMat.identity();
+    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
+    vec3 zero = Input::hmd.zero;
+    zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
+
+    mat4 cR = snapTurnMat * mat4(vrRightControllerOrientation, vec3(0));
+    cR.setPos((vrRightControllerPosition - zero) * ONE_METER);
+
+    //I don't know what this does but it is necessary for some reason!
+    mat4 scaleBasis(
+            1,  0,  0, 0,
+            0, -1,  0, 0,
+            0,  0, -1, 0,
+            0,  0,  0, 1);
+
+    cR = scaleBasis * cR * scaleBasis.inverse();
+    Input::hmd.controllers[0] = cR;
+
+    mat4 cL = snapTurnMat * mat4(vrLeftControllerOrientation, vec3(0));
+    cL.setPos((vrLeftControllerPosition - zero) * ONE_METER);
+
+    cL = scaleBasis * cL * scaleBasis.inverse();
+    Input::hmd.controllers[1] = cL;
+
+
+
+    //keep old state
+    rightTrackedRemoteState_old = rightTrackedRemoteState_new;
+    leftTrackedRemoteState_old = leftTrackedRemoteState_new;
+}
+
+
+#ifdef _DEBUG
+int main(int argc, char** argv) {
+#else
+int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    int argc = (lpCmdLine && strlen(lpCmdLine)) ? 2 : 1;
+    const char* argv[] = { "", lpCmdLine };
+#endif
+    cacheDir[0] = saveDir[0] = contentDir[0] = 0;
+
+    strcat(cacheDir, getenv("APPDATA"));
+    strcat(cacheDir, "\\OpenLara\\");
+    strcpy(saveDir, cacheDir);
+    CreateDirectory(cacheDir, NULL);
+
+    RECT r = { 0, 0, 1280, 720 };
+    AdjustWindowRect(&r, WS_OVERLAPPEDWINDOW, false);
+
+#ifndef _DEBUG
+    {
+        int ox = (GetSystemMetrics(SM_CXSCREEN) - (r.right - r.left)) / 2;
+        int oy = (GetSystemMetrics(SM_CYSCREEN) - (r.bottom - r.top)) / 2;
+        r.left += ox;
+        r.top += oy;
+        r.right += ox;
+        r.bottom += oy;
+    }
+#else
+    r.right -= r.left;
+    r.bottom -= r.top;
+    r.left = r.top = 0;
+#endif
+
+    hWnd = CreateWindow("static", "BeefRaiderXR", WS_OVERLAPPEDWINDOW, r.left, r.top, r.right - r.left, r.bottom - r.top, 0, 0, 0, 0);
+    SendMessage(hWnd, WM_SETICON, 1, (LPARAM)LoadIcon(GetModuleHandle(NULL), "MAINICON"));
+
+    ContextCreate();
+
+    Sound::channelsCount = 0;
+
+    osStartTime = Core::getTime();
+    sndInit(hWnd);
+
+    Core::defLang = checkLanguage();
+
+    Game::init(argc > 1 ? argv[1] : NULL);
+
+    SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)&WndProc);
+
+    if (Core::isQuit) {
+        MessageBoxA(hWnd, "Please check the readme file first!", "Game resources not found", MB_ICONHAND);
+    }
+    else {
+        ShowWindow(hWnd, SW_SHOWDEFAULT);
+    }
+
+    MSG msg;
+
+    while (!Core::isQuit) {
+        if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+            if (msg.message == WM_QUIT)
+                Core::quit();
+        }
+        else {
+            TBXR_FrameSetup();
+            if (Game::update()) {
+                Game::render();
+                Core::waitVBlank();
+
+                TBXR_submitFrame();
+
+                ContextSwap();
+            }
+#ifdef _DEBUG
+            //Sleep(10);
+#endif
+        }
+    };
+
+    sndFree();
+    Game::deinit();
+
+    ContextDelete();
+
+    DestroyWindow(hWnd);
+
+    return 0;
+}
+
