@@ -3,10 +3,44 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <cstring>
+#include <string>
+
 #include "VrInput.h"
 #include "VrCvars.h"
 
 #include <game.h>
+
+#ifdef ANDROID
+#include <unistd.h>
+#include <pthread.h>
+#include <sys/prctl.h>					// for prctl( PR_SET_NAME )
+#include <android/log.h>
+#include <android/native_window_jni.h>	// for native window JNI
+#include <android/input.h>
+
+#include <SLES/OpenSLES.h>
+#include <SLES/OpenSLES_Android.h>
+
+#include "android/argtable3.h"
+
+//#define ENABLE_GL_DEBUG
+#define ENABLE_GL_DEBUG_VERBOSE 1
+
+//Let's go to the maximum!
+extern int NUM_MULTI_SAMPLES;
+extern float SS_MULTIPLIER    ;
+
+
+/* global arg_xxx structs */
+struct arg_dbl *ss;
+struct arg_lit *cheats;
+struct arg_end *end;
+
+char **argv;
+int argc=0;
+
+#endif
 
 bool cheatsEnabled = false;
 bool isDemo = false;
@@ -31,6 +65,41 @@ void osToggleVR(bool enable)
 
 int osStartTime = 0;
 
+#ifdef ANDROID
+
+/*
+================
+Sys_Milliseconds
+================
+*/
+unsigned long sys_timeBase = 0;
+int curtime;
+int Sys_Milliseconds ()
+{
+    struct timeval tp;
+
+    gettimeofday(&tp, NULL);
+
+    if (!sys_timeBase)
+    {
+        sys_timeBase = tp.tv_sec;
+        return tp.tv_usec/1000;
+    }
+
+    curtime = (tp.tv_sec - sys_timeBase)*1000 + tp.tv_usec/1000;
+
+    static int sys_timeBase = curtime;
+    curtime -= sys_timeBase;
+    return curtime;
+}
+
+int   osGetTimeMS()
+{
+    return int(Sys_Milliseconds ()) - osStartTime;
+}
+
+#else
+	
 int osGetTimeMS() {
 #ifdef DEBUG
     LARGE_INTEGER Freq, Count;
@@ -42,6 +111,8 @@ int osGetTimeMS() {
     return int(timeGetTime()) - osStartTime;
 #endif
 }
+
+#endif
 
 bool  osJoyReady(int index)
 {
@@ -63,6 +134,91 @@ void osBeforeLoadNextLevel()
     Input::hmd.extrarot = 0.f;
 }
 
+#ifdef ANDROID
+
+// sound
+#define          SND_FRAMES 1176
+
+Sound::Frame     sndBuf[2][SND_FRAMES];
+int              sndBufIndex;
+
+SLObjectItf      sndEngine;
+SLObjectItf      sndOutput;
+SLObjectItf      sndPlayer;
+SLBufferQueueItf sndQueue = NULL;
+SLPlayItf        sndPlay  = NULL;
+
+void sndFill(SLBufferQueueItf bq, void *context) {
+    if (!sndQueue) return;
+    Sound::fill(sndBuf[sndBufIndex ^= 1], SND_FRAMES);
+    (*sndQueue)->Enqueue(sndQueue, sndBuf[sndBufIndex], SND_FRAMES * sizeof(Sound::Frame));
+}
+
+void sndSetState(bool active) {
+    if (!sndPlay) return;
+    (*sndPlay)->SetPlayState(sndPlay, active ? SL_PLAYSTATE_PLAYING : SL_PLAYSTATE_PAUSED);
+}
+
+void sndInit() {
+    slCreateEngine(&sndEngine, 0, NULL, 0, NULL, NULL);
+    (*sndEngine)->Realize(sndEngine, SL_BOOLEAN_FALSE);
+
+    SLEngineItf engine;
+
+    (*sndEngine)->GetInterface(sndEngine, SL_IID_ENGINE, &engine);
+    (*engine)->CreateOutputMix(engine, &sndOutput, 0, NULL, NULL);
+    (*sndOutput)->Realize(sndOutput, SL_BOOLEAN_FALSE);
+
+    SLDataFormat_PCM bufFormat;
+    bufFormat.formatType    = SL_DATAFORMAT_PCM;
+    bufFormat.numChannels   = 2;
+    bufFormat.samplesPerSec = SL_SAMPLINGRATE_44_1;
+    bufFormat.bitsPerSample = SL_PCMSAMPLEFORMAT_FIXED_16;
+    bufFormat.containerSize = SL_PCMSAMPLEFORMAT_FIXED_16;
+    bufFormat.channelMask   = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT ;
+    bufFormat.endianness    = SL_BYTEORDER_LITTLEENDIAN;
+
+    SLDataLocator_AndroidSimpleBufferQueue bufLocator;
+    bufLocator.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
+    bufLocator.numBuffers  = 2;
+
+    SLDataLocator_OutputMix snkLocator;
+    snkLocator.locatorType = SL_DATALOCATOR_OUTPUTMIX;
+    snkLocator.outputMix   = sndOutput;
+
+    SLDataSource audioSrc;
+    audioSrc.pLocator = &bufLocator;
+    audioSrc.pFormat  = &bufFormat;
+
+    SLDataSink audioSnk;
+    audioSnk.pLocator = &snkLocator;
+    audioSnk.pFormat  = NULL;
+
+    SLInterfaceID audioInt[] = { SL_IID_BUFFERQUEUE, SL_IID_PLAY  };
+    SLboolean     audioReq[] = { SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE };
+
+    (*engine)->CreateAudioPlayer(engine, &sndPlayer, &audioSrc, &audioSnk, 2, audioInt, audioReq);
+    (*sndPlayer)->Realize(sndPlayer, SL_BOOLEAN_FALSE);
+    (*sndPlayer)->GetInterface(sndPlayer, SL_IID_BUFFERQUEUE, &sndQueue);
+    (*sndPlayer)->GetInterface(sndPlayer, SL_IID_PLAY, &sndPlay);
+    (*sndQueue)->RegisterCallback(sndQueue, sndFill, NULL);
+
+    sndBufIndex = 1;
+    sndFill(sndQueue, NULL);
+    sndFill(sndQueue, NULL);
+}
+
+void sndFree() {
+    if (sndPlayer) (*sndPlayer)->Destroy(sndPlayer);
+    if (sndOutput) (*sndOutput)->Destroy(sndOutput);
+    if (sndEngine) (*sndEngine)->Destroy(sndEngine);
+    sndPlayer = sndOutput = sndEngine = NULL;
+    sndQueue = NULL;
+    sndPlay  = NULL;
+}
+
+#else
+	
 
 // multi-threading
 void* osMutexInit() {
@@ -449,6 +605,83 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     return 0;
 }
 
+#endif
+
+
+#ifdef ANDROID
+
+
+static void UnEscapeQuotes( char *arg )
+{
+	char *last = NULL;
+	while( *arg ) {
+		if( *arg == '"' && *last == '\\' ) {
+			char *c_curr = arg;
+			char *c_last = last;
+			while( *c_curr ) {
+				*c_last = *c_curr;
+				c_last = c_curr;
+				c_curr++;
+			}
+			*c_last = '\0';
+		}
+		last = arg;
+		arg++;
+	}
+}
+
+static int ParseCommandLine(char *cmdline, char **argv)
+{
+	char *bufp;
+	char *lastp = NULL;
+	int argc, last_argc;
+	argc = last_argc = 0;
+	for ( bufp = cmdline; *bufp; ) {
+		while ( isspace(*bufp) ) {
+			++bufp;
+		}
+		if ( *bufp == '"' ) {
+			++bufp;
+			if ( *bufp ) {
+				if ( argv ) {
+					argv[argc] = bufp;
+				}
+				++argc;
+			}
+			while ( *bufp && ( *bufp != '"' || *lastp == '\\' ) ) {
+				lastp = bufp;
+				++bufp;
+			}
+		} else {
+			if ( *bufp ) {
+				if ( argv ) {
+					argv[argc] = bufp;
+				}
+				++argc;
+			}
+			while ( *bufp && ! isspace(*bufp) ) {
+				++bufp;
+			}
+		}
+		if ( *bufp ) {
+			if ( argv ) {
+				*bufp = '\0';
+			}
+			++bufp;
+		}
+		if( argv && last_argc != argc ) {
+			UnEscapeQuotes( argv[last_argc] );
+		}
+		last_argc = argc;
+	}
+	if ( argv ) {
+		argv[argc] = NULL;
+	}
+	return(argc);
+}
+
+#endif
+
 /*
 ================================================================================
 
@@ -545,15 +778,14 @@ void VR_SetHMDPosition(float x, float y, float z )
 static bool forceUpdatePose = false;
 
 void VR_Init()
-{
-	//GlInitExtensions();
-
-	//First - all the OpenXR stuff and nonsense
-	TBXR_InitialiseOpenXR();
-	TBXR_EnterVR();
-	TBXR_InitRenderer();
-	TBXR_InitActions();
-	TBXR_WaitForSessionActive();
+{	
+#ifndef ANDROID
+    TBXR_InitialiseOpenXR();
+    TBXR_EnterVR();
+    TBXR_InitRenderer();
+    TBXR_InitActions();
+    TBXR_WaitForSessionActive();
+#endif
 
 	//Initialise all our variables
 	remote_movementSideways = 0.0f;
@@ -610,6 +842,9 @@ void VR_Init()
 
     vr.menu_right_handed = vr_control_scheme->integer == 0;
 
+#ifdef ANDROID
+    Cvar_Get("openXRHMD", gAppState.OpenXRHMD, CVAR_ARCHIVE);
+#endif
 
     int eyeW, eyeH;
     TBXR_GetScreenRes(&eyeW, &eyeH);
@@ -621,7 +856,7 @@ void VR_Init()
     Core::eyeTex[1] = new Texture(eyeW, eyeH, 1, TexFormat::FMT_RGBA, OPT_TARGET);
 
     forceUpdatePose = true;
-	}
+}
 
 
 
@@ -639,20 +874,6 @@ bool VR_GetVRProjection(int eye, float zNear, float zFar, float zZoomX, float zZ
 
     return true;
 }
-/*
-mat4 convToMat4(const XrMatrix4x4f &m) {
-    return mat4(m.m[0], m.m[4], m.m[8], m.m[12],
-                m.m[1], m.m[5], m.m[9], m.m[13],
-                m.m[2], m.m[6], m.m[10], m.m[14],
-                m.m[3], m.m[7], m.m[11], m.m[15]);
-}
-*/
-mat4 convToMat4(const XrMatrix4x4f &m) {
-    return mat4(m.m[0], m.m[1], m.m[2], m.m[3],
-                m.m[4], m.m[5], m.m[6], m.m[7],
-                m.m[8], m.m[9], m.m[10], m.m[11],
-                m.m[12], m.m[13], m.m[14], m.m[15]);
-	}
 
 void VR_prepareEyeBuffer(int eye )
 {
@@ -663,13 +884,20 @@ void VR_prepareEyeBuffer(int eye )
 
 int VR_SetRefreshRate(int refreshRate)
 {
+#ifdef ANDROID
+	if (strstr(gAppState.OpenXRHMD, "meta") != NULL)
+	{
+		OXR(gAppState.pfnRequestDisplayRefreshRate(gAppState.Session, (float) refreshRate));
+		return refreshRate;
+	}
+#endif
 	return 0;
 }
 
 //All the stuff we want to do each frame specifically for this game
 void VR_FrameSetup()
 {
-	static float refresh = 0;
+    static float refresh = 0;
 
     mat4 pL, pR;
     VR_GetVRProjection(0, 8.0f, 45.0f * 1024.0f, 1.f, 1.f, (float *) &pL.e00);
@@ -689,16 +917,16 @@ void VR_FrameSetup()
 
     mat4 head = snapTurnMat * mat4(vrOrientation, vec3(0));
 
-	if (refresh != vr_refresh->value)
-	{
-		refresh = vr_refresh->value;
-		VR_SetRefreshRate(vr_refresh->value);
-	}
+    if (refresh != vr_refresh->value)
+    {
+        refresh = vr_refresh->value;
+        VR_SetRefreshRate(vr_refresh->value);
+    }
 
     if (leftTrackedRemoteState_new.Buttons & xrButton_LThumb)
-	{
+    {
         forceUpdatePose = true;
-	}
+    }
 
     if (Input::hmd.zero.x == INF || forceUpdatePose) {
         Input::hmd.zero = vrPosition;
@@ -706,10 +934,10 @@ void VR_FrameSetup()
         Input::hmd.head.setPos(vrPosition);
 
         forceUpdatePose = false;
-	}
+    }
 
     vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
-	
+
     Input::hmd.body = head; // direction body is facing
     vec3 zero = Input::hmd.zero;
     zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
@@ -726,6 +954,138 @@ void VR_FrameSetup()
     Input::hmd.setView(pL, pR, vL, vR);
 }
 
+
+
+#ifdef ANDROID
+void * AppThreadFunction(void * parm ) {
+	gAppThread = (ovrAppThread *) parm;
+
+	java.Vm = gAppThread->JavaVm;
+	java.Vm->AttachCurrentThread(&java.Env, NULL);
+	java.ActivityObject = gAppThread->ActivityObject;
+
+	jclass cls = java.Env->GetObjectClass(java.ActivityObject);
+
+	// Note that AttachCurrentThread will reset the thread name.
+	prctl(PR_SET_NAME, (long) "AppThreadFunction", 0, 0, 0);
+
+	//Set device defaults
+	if (SS_MULTIPLIER == 0.0f)
+	{
+		SS_MULTIPLIER = 1.2f;
+	}
+	else if (SS_MULTIPLIER > 1.5f)
+	{
+		SS_MULTIPLIER = 1.5f;
+	}
+
+	gAppState.MainThreadTid = gettid();
+
+    sndInit();
+
+	TBXR_InitialiseOpenXR();
+
+	TBXR_EnterVR();
+	TBXR_InitRenderer();
+	TBXR_InitActions();
+
+    TBXR_WaitForSessionActive();
+
+    std::string levelName;
+    if (isDemo)
+    {
+        chdir("/sdcard/BeefRaiderXR/DATA");
+        levelName = "LEVEL2.PHD";
+    }
+    else
+    {
+        chdir("/sdcard/BeefRaiderXR");
+    }
+
+    osStartTime = Core::getTime();
+
+    sndSetState(true);
+
+    if (argc > 1 && !isDemo)
+    {
+        for (int arg = 1; arg < argc; ++arg)
+        {
+            if (!strstr(argv[arg], "--"))
+            {
+                levelName = argv[arg];
+                break;
+            }
+        }
+    }
+
+	//start
+    Game::init(levelName.length() > 0 ? levelName.c_str() : NULL);
+
+    while (!Core::isQuit) {
+        {
+            TBXR_FrameSetup();
+            if (Game::update()) {
+                Game::render();
+
+                Core::waitVBlank();
+
+                TBXR_submitFrame();
+            }
+        }
+    };
+
+
+    Game::deinit();
+
+	return NULL;
+}
+
+extern "C" {
+void jni_haptic_event(const char *event, int position, int flags, int intensity, float angle, float yHeight);
+void jni_haptic_updateevent(const char *event, int intensity, float angle);
+void jni_haptic_stopevent(const char *event);
+void jni_haptic_endframe();
+void jni_haptic_enable();
+void jni_haptic_disable();
+};
+
+void VR_ExternalHapticEvent(const char* event, int position, int flags, int intensity, float angle, float yHeight )
+{
+	jni_haptic_event(event, position, flags, intensity, angle, yHeight);
+}
+
+void VR_HapticUpdateEvent(const char* event, int intensity, float angle )
+{
+	jni_haptic_updateevent(event, intensity, angle);
+}
+
+void VR_HapticEndFrame()
+{
+	jni_haptic_endframe();
+}
+
+void VR_HapticStopEvent(const char* event)
+{
+	jni_haptic_stopevent(event);
+}
+
+void VR_HapticEnable()
+{
+	static bool firstTime = true;
+	if (firstTime) {
+		jni_haptic_enable();
+		firstTime = false;
+		jni_haptic_event("fire_pistol", 0, 0, 100, 0, 0);
+	}
+}
+
+void VR_HapticDisable()
+{
+	jni_haptic_disable();
+}
+
+#else
+	
 void VR_ExternalHapticEvent(const char* event, int position, int flags, int intensity, float angle, float yHeight )
 {
 }
@@ -750,6 +1110,8 @@ void VR_HapticEnable()
 void VR_HapticDisable()
 {
 }
+
+#endif
 
 /*
  *  event - name of event
@@ -848,7 +1210,8 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 		//Quick blip
 		TBXR_Vibrate(50, flags, fIntensity);
 	}
-}
+}	
+
 
 void VR_HandleControllerInput() {
 	TBXR_UpdateControllers();
@@ -856,7 +1219,7 @@ void VR_HandleControllerInput() {
     bool usingSnapTurn = Core::settings.detail.turnmode == 0;
 
     if (!inventory->isActive())
-	{
+    {
         static int increaseSnap = true;
         {
             if (usingSnapTurn)
@@ -943,7 +1306,7 @@ void VR_HandleControllerInput() {
                 reversed = false;
             }
         }
-	}
+    }
 
     bool actionPressed = false;
     if (!lara || lara->emptyHands())
@@ -1068,9 +1431,9 @@ void VR_HandleControllerInput() {
         else
         {
             //The only time joyLeft is used is to indicate the firing of the left hand weapon
-            Input::setJoyDown(joyLeft, jkA, leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
-            Input::setJoyDown(joyRight, jkA,
-                              rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0);
+            bool holster = rightTrackedRemoteState_new.Buttons & xrButton_B;
+            Input::setJoyDown(joyLeft, jkA, !holster && (leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0));
+            Input::setJoyDown(joyRight, jkA, !holster && (rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0));
 
             //See if we should be trying to two hand the shotgun
             /*        if (((Lara*)inventory->game->getLara())->wpnCurrent == TR::Entity::SHOTGUN)
@@ -1258,6 +1621,348 @@ void VR_HandleControllerInput() {
     leftTrackedRemoteState_old = leftTrackedRemoteState_new;
 }
 
+#ifdef ANDROID
+
+/*
+================================================================================
+
+Activity lifecycle
+
+================================================================================
+*/
+
+extern "C" {
+
+jmethodID android_shutdown;
+static JavaVM *jVM;
+static jobject jniCallbackObj=0;
+
+void jni_shutdown()
+{
+	ALOGV("Calling: jni_shutdown");
+	JNIEnv *env;
+	jobject tmp;
+	if ((jVM->GetEnv((void**) &env, JNI_VERSION_1_4))<0)
+	{
+		jVM->AttachCurrentThread(&env, NULL);
+	}
+	return env->CallVoidMethod(jniCallbackObj, android_shutdown);
+}
+
+void VR_Shutdown()
+{
+	jni_shutdown();
+}
+
+jmethodID android_haptic_event;
+jmethodID android_haptic_updateevent;
+jmethodID android_haptic_stopevent;
+jmethodID android_haptic_endframe;
+jmethodID android_haptic_enable;
+jmethodID android_haptic_disable;
+
+void jni_haptic_event(const char* event, int position, int flags, int intensity, float angle, float yHeight)
+{
+	JNIEnv *env;
+	jobject tmp;
+	if ((jVM->GetEnv((void**) &env, JNI_VERSION_1_4))<0)
+	{
+		jVM->AttachCurrentThread(&env, NULL);
+	}
+
+	jstring StringArg1 = env->NewStringUTF(event);
+
+	return env->CallVoidMethod(jniCallbackObj, android_haptic_event, StringArg1, position, flags, intensity, angle, yHeight);
+}
+
+void jni_haptic_updateevent(const char* event, int intensity, float angle)
+{
+	JNIEnv *env;
+	jobject tmp;
+	if ((jVM->GetEnv((void**) &env, JNI_VERSION_1_4))<0)
+	{
+		jVM->AttachCurrentThread(&env, NULL);
+	}
+
+	jstring StringArg1 = env->NewStringUTF(event);
+
+	return env->CallVoidMethod(jniCallbackObj, android_haptic_updateevent, StringArg1, intensity, angle);
+}
+
+void jni_haptic_stopevent(const char* event)
+{
+	ALOGV("Calling: jni_haptic_stopevent");
+	JNIEnv *env;
+	jobject tmp;
+	if ((jVM->GetEnv((void**) &env, JNI_VERSION_1_4))<0)
+	{
+		jVM->AttachCurrentThread(&env, NULL);
+	}
+
+	jstring StringArg1 = env->NewStringUTF(event);
+
+	return env->CallVoidMethod(jniCallbackObj, android_haptic_stopevent, StringArg1);
+}
+
+void jni_haptic_endframe()
+{
+	JNIEnv *env;
+	jobject tmp;
+	if ((jVM->GetEnv((void**) &env, JNI_VERSION_1_4))<0)
+	{
+		jVM->AttachCurrentThread(&env, NULL);
+	}
+
+	return env->CallVoidMethod(jniCallbackObj, android_haptic_endframe);
+}
+
+void jni_haptic_enable()
+{
+	ALOGV("Calling: jni_haptic_enable");
+	JNIEnv *env;
+	jobject tmp;
+	if ((jVM->GetEnv((void**) &env, JNI_VERSION_1_4))<0)
+	{
+		jVM->AttachCurrentThread(&env, NULL);
+	}
+
+	return env->CallVoidMethod(jniCallbackObj, android_haptic_enable);
+}
+
+void jni_haptic_disable()
+{
+	ALOGV("Calling: jni_haptic_disable");
+	JNIEnv *env;
+	if ((jVM->GetEnv((void**) &env, JNI_VERSION_1_4))<0)
+	{
+		jVM->AttachCurrentThread(&env, NULL);
+	}
+
+	return env->CallVoidMethod(jniCallbackObj, android_haptic_disable);
+}
+
+int JNI_OnLoad(JavaVM* vm, void* reserved)
+{
+	JNIEnv *env;
+    jVM = vm;
+	if(vm->GetEnv((void**) &env, JNI_VERSION_1_4) != JNI_OK)
+	{
+		ALOGE("Failed JNI_OnLoad");
+		return -1;
+	}
+
+	return JNI_VERSION_1_4;
+}
+
+JNIEXPORT jlong JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onCreate( JNIEnv * env, jclass activityClass, jobject activity,
+																	   jstring commandLineParams, jboolean demo)
+{
+	ALOGV( "    GLES3JNILib::onCreate()" );
+
+	/* the global arg_xxx structs are initialised within the argtable */
+	void *argtable[] = {
+			ss    = arg_dbl0("s", "supersampling", "<double>", "super sampling value (default: Q1: 1.2, Q2: 1.35)"),
+            cheats = arg_litn(NULL, "cheats", 0, 1, "Whether cheats are enabled"),
+            end   = arg_end(20)
+	};
+
+	jboolean iscopy;
+	const char *arg = env->GetStringUTFChars(commandLineParams, &iscopy);
+
+	char *cmdLine = NULL;
+	if (arg && strlen(arg))
+	{
+		cmdLine = strdup(arg);
+	}
+
+	env->ReleaseStringUTFChars(commandLineParams, arg);
+
+	ALOGV("Command line %s", cmdLine);
+	argv = (char**)malloc(sizeof(char*) * 255);
+	argc = ParseCommandLine(strdup(cmdLine), argv);
+
+	/* verify the argtable[] entries were allocated sucessfully */
+	if (arg_nullcheck(argtable) == 0) {
+		/* Parse the command line as defined by argtable[] */
+		arg_parse(argc, argv, argtable);
+
+        if (ss->count > 0 && ss->dval[0] > 0.0)
+        {
+            SS_MULTIPLIER = ss->dval[0];
+        }
+
+        if (cheats->count > 0)
+        {
+            cheatsEnabled = true;
+        }
+	}
+
+    isDemo = demo;
+
+	ovrAppThread * appThread = (ovrAppThread *) malloc( sizeof( ovrAppThread ) );
+	ovrAppThread_Create( appThread, env, activity, activityClass );
+
+	surfaceMessageQueue_Enable(&appThread->MessageQueue, true);
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_CREATE, MQ_WAIT_PROCESSED);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+
+	return (jlong)((size_t)appThread);
+}
+
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onStart( JNIEnv * env, jobject obj, jlong handle, jobject obj1)
+{
+	ALOGV( "    GLES3JNILib::onStart()" );
+
+
+    jniCallbackObj = (jobject)env->NewGlobalRef( obj1);
+	jclass callbackClass = env->GetObjectClass( jniCallbackObj);
+
+	android_shutdown = env->GetMethodID(callbackClass,"shutdown","()V");
+	android_haptic_event = env->GetMethodID(callbackClass, "haptic_event", "(Ljava/lang/String;IIIFF)V");
+	android_haptic_updateevent = env->GetMethodID(callbackClass, "haptic_updateevent", "(Ljava/lang/String;IF)V");
+	android_haptic_stopevent = env->GetMethodID(callbackClass, "haptic_stopevent", "(Ljava/lang/String;)V");
+	android_haptic_endframe = env->GetMethodID(callbackClass, "haptic_endframe", "()V");
+	android_haptic_enable = env->GetMethodID(callbackClass, "haptic_enable", "()V");
+	android_haptic_disable = env->GetMethodID(callbackClass, "haptic_disable", "()V");
+
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_START, MQ_WAIT_PROCESSED);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onResume( JNIEnv * env, jobject obj, jlong handle )
+{
+	ALOGV( "    GLES3JNILib::onResume()" );
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_RESUME, MQ_WAIT_PROCESSED);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onPause( JNIEnv * env, jobject obj, jlong handle )
+{
+	ALOGV( "    GLES3JNILib::onPause()" );
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_PAUSE, MQ_WAIT_PROCESSED);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onStop( JNIEnv * env, jobject obj, jlong handle )
+{
+	ALOGV( "    GLES3JNILib::onStop()" );
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_STOP, MQ_WAIT_PROCESSED);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onDestroy( JNIEnv * env, jobject obj, jlong handle )
+{
+	ALOGV( "    GLES3JNILib::onDestroy()" );
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_DESTROY, MQ_WAIT_PROCESSED);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+	surfaceMessageQueue_Enable(&appThread->MessageQueue, false);
+
+	ovrAppThread_Destroy( appThread, env );
+	free( appThread );
+}
+
+/*
+================================================================================
+
+Surface lifecycle
+
+================================================================================
+*/
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onSurfaceCreated( JNIEnv * env, jobject obj, jlong handle, jobject surface )
+{
+	ALOGV( "    GLES3JNILib::onSurfaceCreated()" );
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+
+	ANativeWindow * newNativeWindow = ANativeWindow_fromSurface( env, surface );
+	if ( ANativeWindow_getWidth( newNativeWindow ) < ANativeWindow_getHeight( newNativeWindow ) )
+	{
+		// An app that is relaunched after pressing the home button gets an initial surface with
+		// the wrong orientation even though android:screenOrientation="landscape" is set in the
+		// manifest. The choreographer callback will also never be called for this surface because
+		// the surface is immediately replaced with a new surface with the correct orientation.
+		ALOGE( "        Surface not in landscape mode!" );
+	}
+
+	ALOGV( "        NativeWindow = ANativeWindow_fromSurface( env, surface )" );
+	appThread->NativeWindow = newNativeWindow;
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
+	surfaceMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onSurfaceChanged( JNIEnv * env, jobject obj, jlong handle, jobject surface )
+{
+	ALOGV( "    GLES3JNILib::onSurfaceChanged()" );
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+
+	ANativeWindow * newNativeWindow = ANativeWindow_fromSurface( env, surface );
+	if ( ANativeWindow_getWidth( newNativeWindow ) < ANativeWindow_getHeight( newNativeWindow ) )
+	{
+		// An app that is relaunched after pressing the home button gets an initial surface with
+		// the wrong orientation even though android:screenOrientation="landscape" is set in the
+		// manifest. The choreographer callback will also never be called for this surface because
+		// the surface is immediately replaced with a new surface with the correct orientation.
+		ALOGE( "        Surface not in landscape mode!" );
+	}
+
+	if ( newNativeWindow != appThread->NativeWindow )
+	{
+		if ( appThread->NativeWindow != NULL )
+		{
+			srufaceMessage message;
+			surfaceMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
+			surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+			ALOGV( "        ANativeWindow_release( NativeWindow )" );
+			ANativeWindow_release( appThread->NativeWindow );
+			appThread->NativeWindow = NULL;
+		}
+		if ( newNativeWindow != NULL )
+		{
+			ALOGV( "        NativeWindow = ANativeWindow_fromSurface( env, surface )" );
+			appThread->NativeWindow = newNativeWindow;
+			srufaceMessage message;
+			surfaceMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
+			surfaceMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
+			surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+		}
+	}
+	else if ( newNativeWindow != NULL )
+	{
+		ANativeWindow_release( newNativeWindow );
+	}
+}
+
+JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onSurfaceDestroyed( JNIEnv * env, jobject obj, jlong handle )
+{
+	ALOGV( "    GLES3JNILib::onSurfaceDestroyed()" );
+	ovrAppThread * appThread = (ovrAppThread *)((size_t)handle);
+	srufaceMessage message;
+	surfaceMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
+	surfaceMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+	ALOGV( "        ANativeWindow_release( NativeWindow )" );
+	ANativeWindow_release( appThread->NativeWindow );
+	appThread->NativeWindow = NULL;
+}
+
+}
+
+#else
+	
+
 
 #ifdef _DEBUG
 int main(int argc, char** argv) {
@@ -1303,7 +2008,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     Core::defLang = checkLanguage();
 
-    Game::init(argc > 1 ? argv[1] : NULL);
+    if (argc > 1 && std::string(argv[1]) == "--cheats")
+    {
+        cheatsEnabled = true;
+    }
+
+    Game::init((argc > 1 && !cheatsEnabled) ? argv[1] : NULL);
 
     SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)&WndProc);
 
@@ -1349,3 +2059,4 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     return 0;
 }
 
+#endif

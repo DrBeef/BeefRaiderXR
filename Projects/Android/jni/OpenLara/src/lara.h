@@ -1324,7 +1324,7 @@ struct Lara : Character {
 
                 if (useIKAim)
                 {
-                    if  (Input::joy[i].down[jkA] && arm.anim != Weapon::Anim::FIRE)
+                    if  (Input::joy[i].down[jkA] && arm.anim != Weapon::Anim::FIRE && wpnState != Weapon::IS_HIDDEN)
                             wpnSetAnim(arm, wpnState, Weapon::Anim::FIRE, 0.0f, 1.0f);
                 }
                 else
@@ -4147,8 +4147,12 @@ struct Lara : Character {
             end = start + dir * ((length1 + length2 - 0.1f) / length);
         }
 
+        //Use body direction for the animated torso
+        vec3 ang = getAngleAbs(Input::hmd.body.dir().xyz());
+        vec3 body_dir = vec3(ang.x, ang.y);
+
         vec3 down = vec3(0.0f, 1.0f, 0.0f);
-        vec3 pole = start + (getDir().cross(down) * (index == 0 ? -1.0f : 1.0f) + down) * 1000.0f;
+        vec3 pole = start + (body_dir.cross(down) * (index == 0 ? -1.0f : 1.0f) + down) * 1000.0f;
 
         if (ikSolve3D(start, end, pole, length1, length2, middle))
         {

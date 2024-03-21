@@ -10,10 +10,10 @@
     <ClCompile Include="..\..\..\..\BeefRaiderXR\VrInputCommon.cpp">
       <Filter>BeefRaiderXR</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BeefRaiderXR\windows\BeefRaiderXR_SurfaceView.cpp">
+    <ClCompile Include="..\..\..\..\BeefRaiderXR\windows\TBXR_Common.cpp">
       <Filter>BeefRaiderXR</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BeefRaiderXR\windows\TBXR_Common.cpp">
+    <ClCompile Include="..\..\..\..\BeefRaiderXR\BeefRaiderXR_Main.cpp">
       <Filter>BeefRaiderXR</Filter>
     </ClCompile>
   </ItemGroup>

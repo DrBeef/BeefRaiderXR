@@ -786,13 +786,6 @@ struct Controller {
     }
 
     vec3 getDir() const {
-        if (getEntity().type == TR::Entity::LARA)
-        {
-            //Use body direction for the animated torso
-            vec3 ang = getAngleAbs(Input::hmd.body.dir().xyz());
-            return vec3(ang.x, ang.y);
-        }
-
         return vec3(angle.x, angle.y);
     }
 

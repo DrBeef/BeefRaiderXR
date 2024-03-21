@@ -33,7 +33,7 @@ LOCAL_C_INCLUDES :=  $(BEEFRAIDERXR_BASE_C_INCLUDES) $(TOP_DIR)
 
 
 
-BEEFRAIDERXR_SRC_FILES :=  ${BEEFRAIDERXR_PATH}/android/BeefRaiderXR_SurfaceView.cpp \
+BEEFRAIDERXR_SRC_FILES :=  ${BEEFRAIDERXR_PATH}/BeefRaiderXR_Main.cpp \
        ${BEEFRAIDERXR_PATH}/android/TBXR_Common.cpp \
        ${BEEFRAIDERXR_PATH}/android/argtable3.c \
        ${BEEFRAIDERXR_PATH}/VrInputCommon.cpp \
