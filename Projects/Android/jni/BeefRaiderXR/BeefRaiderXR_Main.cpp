@@ -541,9 +541,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_ACTIVATE:
         break;
     case WM_SIZE:
-        Core::width = LOWORD(lParam);
-        Core::height = HIWORD(lParam);
-        ContextResize();
+        //Core::width = LOWORD(lParam);
+        //Core::height = HIWORD(lParam);
+        //ContextResize();
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -1326,6 +1326,7 @@ void VR_HandleControllerInput() {
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
     // is pressing the thumbstick like a modern game
     else if (!actionPressed &&
+            (Game::level && !Game::level->level.isCutsceneLevel()) &&
             (laraState == Lara::STATE_STOP ||
               laraState == Lara::STATE_RUN ||
               laraState == Lara::STATE_WALK ||

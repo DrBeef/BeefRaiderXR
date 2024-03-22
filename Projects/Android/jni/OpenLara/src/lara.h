@@ -333,7 +333,6 @@ struct Lara : Character {
     bool        dozy;
     bool        canJump;
     bool        useIK;
-    bool        useIKAim;
 
     int32       networkInput;
 
@@ -652,7 +651,6 @@ struct Lara : Character {
         }
 
         useIK = true;
-        useIKAim = true;
     }
 
     virtual ~Lara() {
@@ -962,6 +960,11 @@ struct Lara : Character {
     }
 
     bool canIKLegs() {
+        if (level->isCutsceneLevel() || !camera->firstPerson)
+        {
+            return false;
+        }
+
         return (animation.index != ANIM_RUN_ASCEND_LEFT
              && animation.index != ANIM_RUN_ASCEND_RIGHT
              && animation.index != ANIM_WALK_ASCEND_LEFT
@@ -983,6 +986,11 @@ struct Lara : Character {
     }
 
     bool canIKArms() {
+        if (level->isCutsceneLevel() || !camera->firstPerson)
+        {
+            return false;
+        }
+
         return    state == STATE_WALK
                   || state == STATE_RUN
                   || state == STATE_STOP
@@ -990,13 +998,9 @@ struct Lara : Character {
                   || state == STATE_FALL_BACK
                   || state == STATE_SLIDE
                   || state == STATE_SLIDE_BACK
-                  //|| state == STATE_BACK_JUMP
-                  //|| state == STATE_RIGHT_JUMP
-                  //|| state == STATE_LEFT_JUMP
                   || state == STATE_COMPRESS
                   || state == STATE_UP_JUMP
                   || state == STATE_FORWARD_JUMP
-                  //|| state == STATE_SWIM
                   || state == STATE_TREAD
                   || state == STATE_FAST_BACK
                   || state == STATE_TURN_RIGHT
@@ -1079,7 +1083,7 @@ struct Lara : Character {
 
     void wpnFire() {
         bool armShot[2] = { false, false };
-        if (useIKAim) {
+        if (canIKArms()) {
             for (int i = 0; i < 2; i++) {
                 if (wpnCurrent == TR::Entity::SHOTGUN &&
                     Core::settings.detail.handedness != i)
@@ -1209,7 +1213,7 @@ struct Lara : Character {
         // TODO: use new trace code
             vec3 p, d, t;
 
-            if (useIKAim) {
+            if (canIKArms()) {
                 int joint = wpnCurrent == TR::Entity::SHOTGUN ?
                             ((Core::settings.detail.handedness == 0) ? JOINT_ARM_R3 : JOINT_ARM_L3) :
                             (i ? JOINT_ARM_L3 : JOINT_ARM_R3);
@@ -1292,7 +1296,7 @@ struct Lara : Character {
 
         if (!emptyHands()) {
 
-            if (useIKAim) {
+            if (canIKArms()) {
                 for (int i = 0; i < 2; ++i)
                 {
                     if (wpnCurrent == TR::Entity::SHOTGUN && Core::settings.detail.handedness != i)
@@ -1322,7 +1326,7 @@ struct Lara : Character {
 
                 Arm &arm = arms[i];
 
-                if (useIKAim)
+                if (canIKArms())
                 {
                     if  (Input::joy[i].down[jkA] && arm.anim != Weapon::Anim::FIRE && wpnState != Weapon::IS_HIDDEN)
                             wpnSetAnim(arm, wpnState, Weapon::Anim::FIRE, 0.0f, 1.0f);
@@ -1579,7 +1583,7 @@ struct Lara : Character {
         arms[0].target = arms[1].target = NULL;
         viewTarget = NULL;
 
-        if (emptyHands() || !wpnReady() || useIKAim) {
+        if (emptyHands() || !wpnReady() || canIKArms()) {
             arms[0].tracking = arms[1].tracking = NULL;
             return;
         }
@@ -1757,7 +1761,7 @@ struct Lara : Character {
         Box box = target->getBoundingBoxLocal();
 
         //Expand the box by 25% if the enemy if it is smaller than Lara, just to help out
-        float expand = (useIKAim && (getBoundingBoxLocal().size().length() > box.size().length())) ?
+        float expand = (canIKArms() && (getBoundingBoxLocal().size().length() > box.size().length())) ?
                 1.5f : 1.f;
         box.expand(expand );
         mat4 m  = target->getMatrix();
@@ -4239,7 +4243,7 @@ struct Lara : Character {
             solveJointsLeg(JOINT_LEG_R1, JOINT_LEG_R2, JOINT_LEG_R3, footHeightR - LARA_HEEL_HEIGHT);
         }
 
-        if (useIKAim && canIKArms()) {
+        if (canIKArms()) {
             solveJointsArm(JOINT_ARM_L1, JOINT_ARM_L2, JOINT_ARM_L3);
             solveJointsArm(JOINT_ARM_R1, JOINT_ARM_R2, JOINT_ARM_R3);
         }
