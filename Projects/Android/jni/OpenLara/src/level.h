@@ -2002,7 +2002,13 @@ struct Level : IGame {
             Core::setBlendMode(bmPremult);
 
             #ifdef MERGE_SPRITES
-                basis.rot = Core::mViewInv.getRot();
+                //Don't rotate sprites with the full HMD orientation
+                mat4 sp;
+                sp.identity();
+                sp.rotateX(DEG2RAD * 180.0f);
+                vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
+                sp.rotateY(-ang.y);
+                basis.rot = sp.getRot();
             #else
                 basis.rot = quat(0, 0, 0, 1);
             #endif
