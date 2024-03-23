@@ -3763,7 +3763,7 @@ struct Lara : Character {
 
         collisionOffset = vec3(0.0f);
 
-        if (checkCollisions() || (velocity + flowVelocity + collisionOffset).length2() >= 1.0f) { // TODO: stop & smash anim
+        if (checkCollisions() || (velocity + flowVelocity + velocity_6dof + collisionOffset).length2() >= 1.0f) { // TODO: stop & smash anim
             vec3 oldPos = pos;
 
             move();
@@ -3871,7 +3871,7 @@ struct Lara : Character {
     }
 
     void move() {
-        vec3 vel = (velocity + flowVelocity) * Core::deltaTime * 30.0f + collisionOffset;
+        vec3 vel = (velocity + flowVelocity + velocity_6dof) * Core::deltaTime * 30.0f + collisionOffset;
         vec3 opos(pos), offset(0.0f);
 
         float radius   = stand == STAND_UNDERWATER ? LARA_RADIUS_WATER : LARA_RADIUS;

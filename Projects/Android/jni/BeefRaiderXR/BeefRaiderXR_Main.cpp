@@ -928,11 +928,25 @@ void VR_FrameSetup()
         forceUpdatePose = true;
     }
 
-    if (Input::hmd.zero.x == INF || forceUpdatePose) {
-        Input::hmd.zero = vrPosition;
-        Input::hmd.head = head;
-        Input::hmd.head.setPos(vrPosition);
+    //6DOF calculation
+    Lara *lara = nullptr;
+    if (!inventory->isActive() &&
+        inventory->game->getLara())
+    {
+        static vec3 prevPos;
+        lara = (Lara *) inventory->game->getLara();
+        lara->velocity_6dof.x = (vrPosition - prevPos).x;
+        lara->velocity_6dof.z = -(vrPosition - prevPos).z;
+        lara->velocity_6dof *= 1000;
+        lara->velocity_6dof = lara->velocity_6dof.rotateY(DEG2RAD * Input::hmd.extrarot);
+        prevPos = vrPosition;
+    }
 
+
+    Input::hmd.head = head;
+    if (Input::hmd.zero.x == INF || forceUpdatePose)
+    {
+        Input::hmd.zero = vrPosition;
         forceUpdatePose = false;
     }
 
@@ -941,15 +955,16 @@ void VR_FrameSetup()
     Input::hmd.body = head; // direction body is facing
     vec3 zero = Input::hmd.zero;
     zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
-    Input::hmd.head.setPos(vrPosition - zero);
+    Input::hmd.head.setPos(vrPosition);
+    Input::hmd.body.setPos(vrPosition - zero);
 
     //Left eye
     mat4 vL = head;
-    vL.setPos((Input::hmd.head.getPos() + (head.right().xyz() * (-0.065f / 2.f))) * ONE_METER);
+    vL.setPos((head.right().xyz() * (-0.065f / 2.f)) * ONE_METER);
 
     //Right eye
     mat4 vR = head;
-    vR.setPos((Input::hmd.head.getPos() + (head.right().xyz() * (0.065f / 2.f))) * ONE_METER);
+    vR.setPos((head.right().xyz() * (0.065f / 2.f)) * ONE_METER);
 
     Input::hmd.setView(pL, pR, vL, vR);
 }
@@ -1321,7 +1336,7 @@ void VR_HandleControllerInput() {
         laraState == Lara::STATE_GLIDE)
     {
         Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
-        Input::hmd.head = Input::hmd.body;
+        Input::hmd.head.setRot(Input::hmd.body.getRot());
     }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
     // is pressing the thumbstick like a modern game
@@ -1342,7 +1357,7 @@ void VR_HandleControllerInput() {
                     atan2(joy.x,
                           joy.y);
             addMat.rotateY(-additionalDirAngle);
-            Input::hmd.head = addMat * Input::hmd.body;
+            Input::hmd.head.setRot((addMat* Input::hmd.body).getRot());
         }
         else if (laraState == Lara::STATE_RUN ||
                  laraState == Lara::STATE_WALK)
@@ -1369,7 +1384,7 @@ void VR_HandleControllerInput() {
             joy.y = cosf(DEG2RAD * angle);
             joy.x = sinf(DEG2RAD * angle);
 
-            Input::hmd.head = Input::hmd.body;
+            Input::hmd.head.setRot(Input::hmd.body.getRot());
         }
 
         Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
@@ -1377,7 +1392,7 @@ void VR_HandleControllerInput() {
 
     if (laraState == Lara::STATE_STOP)
     {
-        Input::hmd.head = Input::hmd.body;
+        Input::hmd.head.setRot(Input::hmd.body.getRot());
     }
 
     vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
@@ -1593,8 +1608,7 @@ void VR_HandleControllerInput() {
     mat4 snapTurnMat;
     snapTurnMat.identity();
     snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
-    vec3 zero = Input::hmd.zero;
-    zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
+    vec3 zero = Input::hmd.head.getPos();// vec3(Input::hmd.head.getPos().x, Input::hmd.zero.y, Input::hmd.head.getPos().z);
 
     mat4 cR = snapTurnMat * mat4(vrRightControllerOrientation, vec3(0));
     cR.setPos((vrRightControllerPosition - zero) * ONE_METER);
