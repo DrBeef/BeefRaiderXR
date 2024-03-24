@@ -1122,71 +1122,6 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 void VR_HandleControllerInput() {
 	TBXR_UpdateControllers();
 
-    bool usingSnapTurn = Core::settings.detail.turnmode == 0;
-
-    if (!inventory->isActive())
-    {
-        static int increaseSnap = true;
-        {
-            if (usingSnapTurn)
-            {
-                if (rightTrackedRemoteState_new.Joystick.x > 0.7f)
-                {
-                    if (increaseSnap)
-                    {
-                        Input::hmd.extrarot -= 45.f;
-                        increaseSnap = false;
-                        if (Input::hmd.extrarot < -180.0f)
-                        {
-                            Input::hmd.extrarot += 360.f;
-                        }
-                    }
-                }
-                else if (rightTrackedRemoteState_new.Joystick.x < 0.3f)
-                {
-                    increaseSnap = true;
-                }
-            }
-
-            static int decreaseSnap = true;
-            if (usingSnapTurn)
-            {
-                if (rightTrackedRemoteState_new.Joystick.x < -0.7f)
-                {
-                    if (decreaseSnap)
-                    {
-                        Input::hmd.extrarot += 45.f;
-                        decreaseSnap = false;
-
-                        if (Input::hmd.extrarot > 180.0f)
-                        {
-                            Input::hmd.extrarot -= 360.f;
-                        }
-                    }
-                }
-                else if (rightTrackedRemoteState_new.Joystick.x > -0.3f)
-                {
-                    decreaseSnap = true;
-                }
-            }
-
-            if (!usingSnapTurn && fabs(rightTrackedRemoteState_new.Joystick.x) > 0.1f) //smooth turn
-            {
-                Input::hmd.extrarot -= (Core::settings.detail.turnmode *
-                                rightTrackedRemoteState_new.Joystick.x);
-                if (Input::hmd.extrarot > 180.0f)
-                {
-                    Input::hmd.extrarot -= 360.f;
-                }
-            }
-        }
-    }
-
-    int joyRight = 0;
-    int joyLeft = 1;
-
-    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
-
     Lara *lara = nullptr;
     int laraState = -1;
     if (!inventory->isActive() &&
@@ -1213,6 +1148,78 @@ void VR_HandleControllerInput() {
             }
         }
     }
+
+    bool usingSnapTurn = Core::settings.detail.turnmode == 0;
+
+    //If swimming allow either joystick to snap/smooth turn you
+    XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
+    if (laraState == Lara::STATE_SWIM)
+    {
+        joystick.x += leftTrackedRemoteState_new.Joystick.x;
+    }
+
+    if (!inventory->isActive())
+    {
+        static int increaseSnap = true;
+        {
+            if (usingSnapTurn)
+            {
+                if (joystick.x > 0.7f)
+                {
+                    if (increaseSnap)
+                    {
+                        Input::hmd.extrarot -= 45.f;
+                        increaseSnap = false;
+                        if (Input::hmd.extrarot < -180.0f)
+                        {
+                            Input::hmd.extrarot += 360.f;
+                        }
+                    }
+                }
+                else if (joystick.x < 0.3f)
+                {
+                    increaseSnap = true;
+                }
+            }
+
+            static int decreaseSnap = true;
+            if (usingSnapTurn)
+            {
+                if (joystick.x < -0.7f)
+                {
+                    if (decreaseSnap)
+                    {
+                        Input::hmd.extrarot += 45.f;
+                        decreaseSnap = false;
+
+                        if (Input::hmd.extrarot > 180.0f)
+                        {
+                            Input::hmd.extrarot -= 360.f;
+                        }
+                    }
+                }
+                else if (joystick.x > -0.3f)
+                {
+                    decreaseSnap = true;
+                }
+            }
+
+            if (!usingSnapTurn && fabs(joystick.x) > 0.1f) //smooth turn
+            {
+                Input::hmd.extrarot -= (Core::settings.detail.turnmode *
+                        joystick.x);
+                if (Input::hmd.extrarot > 180.0f)
+                {
+                    Input::hmd.extrarot -= 360.f;
+                }
+            }
+        }
+    }
+
+    int joyRight = 0;
+    int joyLeft = 1;
+
+    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
 
     bool actionPressed = false;
     if (!lara || lara->emptyHands())
