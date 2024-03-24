@@ -1373,6 +1373,9 @@ namespace TR {
         // TR1
             case LVL_TR1_TITLE :
                 CHECK_FILE("TITLEH.png");           // Android
+#ifdef _OS_WIN
+                CHECK_FILE("TITLEBRXR.PCX");      // PC - BeefRaiderXR Alternative background - user can delete if they don't want it
+#endif
                 CHECK_FILE("DATA/TITLEH.PCX");      // PC
                 CHECK_FILE("DELDATA/AMERTIT.RAW");  // PSX
                 CHECK_FILE("DELDATA/JAPTIT.RAW");   // PSX JAP

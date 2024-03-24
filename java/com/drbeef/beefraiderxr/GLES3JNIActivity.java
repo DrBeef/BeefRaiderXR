@@ -205,11 +205,11 @@ import java.util.Vector;
 		//Copy the command line params file
 		copy_asset("/sdcard/BeefRaiderXR", "commandline.txt", false);
 
-		//Copy demo files
-		copy_asset("/sdcard/BeefRaiderXR/DATA", "INSTALL.PCX", false);
-		copy_asset("/sdcard/BeefRaiderXR/DATA", "LEVEL2.PHD", false);
-		copy_asset("/sdcard/BeefRaiderXR/DATA", "TITLE.PHD", false);
-		copy_asset("/sdcard/BeefRaiderXR/DATA", "TITLEH.PCX", false);
+		if (!new File("/sdcard/BeefRaiderXR/nocopy").exists())
+		{
+			//Copy demo files
+			copy_asset("/sdcard/BeefRaiderXR/DATA", "LEVEL2.PHD", false);
+		}
 
 		//Read these from a file and pass through
 		commandLineParams = new String("");

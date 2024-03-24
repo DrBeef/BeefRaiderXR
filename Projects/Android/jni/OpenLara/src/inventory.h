@@ -1872,7 +1872,7 @@ struct Inventory {
                 h.setPos(Input::hmd.body.getPos());
                 head = h.inverseOrtho();
             }
-            vec3 pos = vec3(0, 0, -4096);
+            vec3 pos = vec3(0, -256, -4096);
 
             Core::mViewInv = mat4(pos, pos + vec3(0, 0, 1), vec3(0, -1, 0));
             Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];

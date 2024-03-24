@@ -1542,7 +1542,7 @@ void VR_HandleControllerInput() {
     mat4 snapTurnMat;
     snapTurnMat.identity();
     snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
-    vec3 zero = Input::hmd.head.getPos();// vec3(Input::hmd.head.getPos().x, Input::hmd.zero.y, Input::hmd.head.getPos().z);
+    vec3 zero = Input::hmd.head.getPos();
 
     mat4 cR = snapTurnMat * mat4(vrRightControllerOrientation, vec3(0));
     cR.setPos((vrRightControllerPosition - zero) * ONE_METER);
