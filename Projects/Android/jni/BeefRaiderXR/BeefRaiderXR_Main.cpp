@@ -107,6 +107,8 @@ int   osGetTimeMS()
 
 #else
 	
+RECT windowSize = { 0, 0, 960, 960 };
+
 int osGetTimeMS() {
 #ifdef DEBUG
     LARGE_INTEGER Freq, Count;
@@ -395,8 +397,6 @@ void ContextDelete() {
     ReleaseDC(hWnd, hDC);
 }
 
-void ContextResize() {}
-
 void ContextSwap() {
     SwapBuffers(hDC);
 }
@@ -548,9 +548,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_ACTIVATE:
         break;
     case WM_SIZE:
-        //Core::width = LOWORD(lParam);
-        //Core::height = HIWORD(lParam);
-        //ContextResize();
+        windowSize.right = windowSize.left + LOWORD(lParam);
+        windowSize.bottom = windowSize.top + HIWORD(lParam);
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -729,6 +728,7 @@ static bool forceUpdatePose = false;
 void VR_Init()
 {	
 #ifndef ANDROID
+    GlInitExtensions();
     TBXR_InitialiseOpenXR();
     TBXR_EnterVR();
     TBXR_InitRenderer();
@@ -1905,7 +1905,6 @@ JNIEXPORT void JNICALL Java_com_drbeef_beefraiderxr_GLES3JNILib_onSurfaceDestroy
 #else
 	
 
-
 #ifdef _DEBUG
 int main(int argc, char** argv) {
 #else
@@ -1920,25 +1919,19 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     strcpy(saveDir, cacheDir);
     CreateDirectory(cacheDir, NULL);
 
-    RECT r = { 0, 0, 1280, 720 };
-    AdjustWindowRect(&r, WS_OVERLAPPEDWINDOW, false);
-
-#ifndef _DEBUG
+    //if (false)
     {
-        int ox = (GetSystemMetrics(SM_CXSCREEN) - (r.right - r.left)) / 2;
-        int oy = (GetSystemMetrics(SM_CYSCREEN) - (r.bottom - r.top)) / 2;
-        r.left += ox;
-        r.top += oy;
-        r.right += ox;
-        r.bottom += oy;
+        int ox = (GetSystemMetrics(SM_CXSCREEN) - (windowSize.right - windowSize.left)) / 2;
+        int oy = (GetSystemMetrics(SM_CYSCREEN) - (windowSize.bottom - windowSize.top)) / 2;
+        windowSize.left += ox;
+        windowSize.top += oy;
+        windowSize.right += ox;
+        windowSize.bottom += oy;
     }
-#else
-    r.right -= r.left;
-    r.bottom -= r.top;
-    r.left = r.top = 0;
-#endif
 
-    hWnd = CreateWindow("static", "BeefRaiderXR", WS_OVERLAPPEDWINDOW, r.left, r.top, r.right - r.left, r.bottom - r.top, 0, 0, 0, 0);
+
+    hWnd = CreateWindow("static", "BeefRaiderXR", WS_OVERLAPPEDWINDOW, windowSize.left, windowSize.top, windowSize.right - windowSize.left, windowSize.bottom - windowSize.top, 0, 0, 0, 0);
+    AdjustWindowRect(&windowSize, WS_OVERLAPPEDWINDOW, false);
     SendMessage(hWnd, WM_SETICON, 1, (LPARAM)LoadIcon(GetModuleHandle(NULL), "MAINICON"));
 
     ContextCreate();

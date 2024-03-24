@@ -20,26 +20,12 @@ const uint32_t numRequiredExtensions =
 
 
 PFNGLBLITFRAMEBUFFERPROC glBlitFramebuffer;
-PFNGLISRENDERBUFFERPROC glIsRenderbuffer;
-PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC glRenderbufferStorageMultisample;
-PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
-PFNGLFRAMEBUFFERTEXTURELAYERPROC glFramebufferTextureLayer;
-PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC glFramebufferTextureMultiviewOVR;
-PFNGLCHECKNAMEDFRAMEBUFFERSTATUSPROC glCheckNamedFramebufferStatus;
 
-#define DEFAULT_OPENGL "OPENGL32.DLL"
+void* GetProc(const char* name);
+#define GetProcOGL(x) x=(decltype(x))GetProc(#x);
 
 void GlInitExtensions() {
-	HMODULE opengllib = LoadLibrary(DEFAULT_OPENGL);
-
-	glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)GetProcAddress(opengllib, "glBlitFramebuffer");
-	glIsRenderbuffer = (PFNGLISRENDERBUFFERPROC)GetProcAddress(opengllib, "glIsRenderbuffer");
-	glRenderbufferStorageMultisample = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)GetProcAddress(opengllib, "glRenderbufferStorageMultisample");
-	glRenderbufferStorageMultisampleEXT =
-		(PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)GetProcAddress(opengllib, "glRenderbufferStorageMultisampleEXT");
-	glFramebufferTextureLayer = (PFNGLFRAMEBUFFERTEXTURELAYERPROC)GetProcAddress(opengllib, "glFramebufferTextureLayer");
-	glFramebufferTextureMultiviewOVR = (PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC)GetProcAddress(opengllib, "glFramebufferTextureMultiviewOVR");
-	glCheckNamedFramebufferStatus = (PFNGLCHECKNAMEDFRAMEBUFFERSTATUSPROC)GetProcAddress(opengllib, "glCheckNamedFramebufferStatus");
+	glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)GetProcOGL(glBlitFramebuffer);
 }
 
 /*
@@ -190,22 +176,16 @@ void ovrFramebuffer_SetNone() {
     GL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 
-extern cvar_t* r_mode;
-bool R_GetModeInfo(int* width, int* height, int mode);
+extern RECT windowSize;
 
 void ovrFramebuffer_Resolve(ovrFramebuffer* frameBuffer) {
-	/*
 	const GLuint colorTexture = frameBuffer->ColorSwapChainImage[frameBuffer->TextureSwapChainIndex].image;
-
-	int width, height;
-	R_GetModeInfo(&width, &height, r_mode->integer);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer->FrameBuffers[frameBuffer->TextureSwapChainIndex]);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBlitFramebuffer(0, 0, gAppState.Width, gAppState.Height,
-		0, 0, width, height,
+		0, 0, windowSize.right - windowSize.left, windowSize.bottom - windowSize.top,
 		GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		*/
 }
 
 void ovrFramebuffer_Acquire(ovrFramebuffer* frameBuffer) {
@@ -1093,6 +1073,11 @@ void TBXR_finishEyeBuffer(int eye )
 	ovrFramebuffer_Release(&gAppState.Renderer.NullFrameBuffer);
 
 	ovrFramebuffer_SetNone();
+
+	if (eye == 0)
+	{
+		ovrFramebuffer_Resolve(frameBuffer);
+	}
 
 	ovrFramebuffer_Release(frameBuffer);
 }
