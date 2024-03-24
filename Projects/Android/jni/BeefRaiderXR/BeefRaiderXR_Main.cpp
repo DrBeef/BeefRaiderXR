@@ -1368,8 +1368,20 @@ void VR_HandleControllerInput() {
             }
         }
 
+        static bool AButtonPressed = false;
+        AButtonPressed |= (rightTrackedRemoteState_new.Buttons & xrButton_A);
+
         //Jump
-        Input::setJoyDown(joyRight, jkX, AButtonActive && (rightTrackedRemoteState_new.Buttons & xrButton_A));
+        Input::setJoyDown(joyRight, jkX, AButtonActive && AButtonPressed);
+
+        if (laraState == Lara::STATE_BACK_JUMP ||
+            laraState == Lara::STATE_FORWARD_JUMP ||
+            laraState == Lara::STATE_UP_JUMP ||
+            laraState == Lara::STATE_LEFT_JUMP ||
+            laraState == Lara::STATE_RIGHT_JUMP)
+        {
+            AButtonPressed = false;
+        }
 
         //Holster/Unholster weapons
         Input::setJoyDown(joyRight, jkY, rightTrackedRemoteState_new.Buttons & xrButton_B);
