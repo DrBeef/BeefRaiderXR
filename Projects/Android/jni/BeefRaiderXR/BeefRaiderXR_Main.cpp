@@ -6,8 +6,7 @@
 #include <cstring>
 #include <string>
 
-#include "VrInput.h"
-#include "VrCvars.h"
+#include "VrCommon.h"
 
 #include <game.h>
 
@@ -44,6 +43,14 @@ int argc=0;
 
 bool cheatsEnabled = false;
 bool isDemo = false;
+
+ovrInputStateTrackedRemote leftTrackedRemoteState_old;
+ovrInputStateTrackedRemote leftTrackedRemoteState_new;
+ovrTrackedController leftRemoteTracking_new;
+ovrInputStateTrackedRemote rightTrackedRemoteState_old;
+ovrInputStateTrackedRemote rightTrackedRemoteState_new;
+ovrTrackedController rightRemoteTracking_new;
+vec3_t hmdorientation_snap;
 
 /*
 ================================================================================
@@ -692,87 +699,29 @@ BeefRaiderXR Stuff
 
 bool VR_UseScreenLayer()
 {
-	vr.using_screen_layer = inventory->video;
-
-	return vr.using_screen_layer;
+	return inventory->video;
 }
 
 float VR_GetScreenLayerDistance()
 {
-	return (2.0f + vr_screen_dist->value);
+	return 5.5f;
 }
 
 
 void VR_SetHMDOrientation(float pitch, float yaw, float roll)
 {
-	//Orientation
-	VectorSet(vr.hmdorientation, pitch, yaw, roll);
-	VectorSubtract(vr.hmdorientation_last, vr.hmdorientation, vr.hmdorientation_delta);
+    static int frame = 0;
 
-	//Keep this for our records
-	VectorCopy(vr.hmdorientation, vr.hmdorientation_last);
-
-	if (!vr.third_person && !vr.remote_npc && !vr.remote_turret && !vr.cgzoommode)
-	{
-		VectorCopy(vr.hmdorientation, vr.hmdorientation_first);
-	}
-
-	if (!vr.remote_turret && !vr.cgzoommode)
-	{
-		VectorCopy(vr.weaponangles[ANGLES_ADJUSTED], vr.weaponangles_first[ANGLES_ADJUSTED]);
-	}
-
-	// View yaw delta
-	float clientview_yaw = vr.clientviewangles[YAW] - vr.hmdorientation[YAW];
-	vr.clientview_yaw_delta = vr.clientview_yaw_last - clientview_yaw;
-	vr.clientview_yaw_last = clientview_yaw;
-
-	// Max-height is set only once on start, or after re-calibration
-	// (ignore too low value which is sometimes provided on start)
-	if (!vr.maxHeight || vr.maxHeight < 1.0) {
-		vr.maxHeight = vr.hmdposition[1];
-	}
-
-	//GB Instantiate initial velocity
-	if(!vr.tempWeaponVelocity)
-	{
-		vr.tempWeaponVelocity = 400.0f;
-	}
-
-	vr.curHeight = vr.hmdposition[1];
+    //Can be set elsewhere
+    if (frame++ < 100)
+    {
+        //Record player position on transition
+        VectorSet(hmdorientation_snap, pitch, yaw, roll);
+    }
 }
 
 void VR_SetHMDPosition(float x, float y, float z )
 {
-	static bool s_useScreen = false;
-	static int frame = 0;
-
-	VectorSet(vr.hmdposition, x, y, z);
-
-	//Can be set elsewhere
-	vr.take_snap |= s_useScreen != VR_UseScreenLayer();
-	if (vr.take_snap || (frame++ < 100))
-    {
-		s_useScreen = VR_UseScreenLayer();
-
-		//Record player position on transition
-		VectorSet(vr.hmdposition_snap, x, y, z);
-		VectorCopy(vr.hmdorientation, vr.hmdorientation_snap);
-		if (vr.cin_camera)
-		{
-			//Reset snap turn too if in a cinematic
-			Input::hmd.extrarot = 0;
-		}
-		vr.take_snap = false;
-    }
-
-	VectorSubtract(vr.hmdposition, vr.hmdposition_snap, vr.hmdposition_offset);
-
-	//Position
-	VectorSubtract(vr.hmdposition_last, vr.hmdposition, vr.hmdposition_delta);
-
-	//Keep this for our records
-	VectorCopy(vr.hmdposition, vr.hmdposition_last);
 }
 
 static bool forceUpdatePose = false;
@@ -788,59 +737,10 @@ void VR_Init()
 #endif
 
 	//Initialise all our variables
-	remote_movementSideways = 0.0f;
-	remote_movementForward = 0.0f;
-	remote_movementUp = 0.0f;
-	positional_movementSideways = 0.0f;
-	positional_movementForward = 0.0f;
 	Input::hmd.extrarot = 0.0f;
-	vr.immersive_cinematics = true;
-	vr.move_speed = 1; // Default to full speed now
 
 	//init randomiser
 	srand(time(NULL));
-
-	//Create Cvars
-	vr_turn_mode = Cvar_Get( "vr_turn_mode", "0", CVAR_ARCHIVE); // 0 = snap, 1 = smooth
-	vr_turn_angle = Cvar_Get( "vr_turn_angle", "45", CVAR_ARCHIVE);
-	vr_positional_factor = Cvar_Get( "vr_positional_factor", "12", CVAR_ARCHIVE);
-    vr_walkdirection = Cvar_Get( "vr_walkdirection", "1", CVAR_ARCHIVE);
-	vr_weapon_pitchadjust = Cvar_Get( "vr_weapon_pitchadjust", "-45.0", CVAR_ARCHIVE);
-    vr_virtual_stock = Cvar_Get( "vr_virtual_stock", "0", CVAR_ARCHIVE);
-
-    //Defaults
-	vr_control_scheme = Cvar_Get( "vr_control_scheme", "0", CVAR_ARCHIVE);
-	vr_switch_sticks = Cvar_Get( "vr_switch_sticks", "0", CVAR_ARCHIVE);
-
-	vr_immersive_cinematics = Cvar_Get("vr_immersive_cinematics", "1", CVAR_ARCHIVE);
-	vr_screen_dist = Cvar_Get( "vr_screen_dist", "3.5", CVAR_ARCHIVE);
-	vr_weapon_velocity_trigger = Cvar_Get( "vr_weapon_velocity_trigger", "2.0", CVAR_ARCHIVE);
-	vr_scope_engage_distance = Cvar_Get( "vr_scope_engage_distance", "0.25", CVAR_ARCHIVE);
-	vr_force_velocity_trigger = Cvar_Get( "vr_force_velocity_trigger", "2.09", CVAR_ARCHIVE);
-	vr_force_distance_trigger = Cvar_Get( "vr_force_distance_trigger", "0.15", CVAR_ARCHIVE);
-    vr_two_handed_weapons = Cvar_Get ("vr_two_handed_weapons", "1", CVAR_ARCHIVE);
-	vr_force_motion_controlled = Cvar_Get ("vr_force_motion_controlled", "1", CVAR_ARCHIVE);
-	vr_force_motion_push = Cvar_Get ("vr_force_motion_push", "3", CVAR_ARCHIVE);
-	vr_force_motion_pull = Cvar_Get ("vr_force_motion_pull", "4", CVAR_ARCHIVE);
-	vr_motion_enable_saber = Cvar_Get ("vr_motion_enable_saber", "0", CVAR_ARCHIVE);
-	vr_always_run = Cvar_Get ("vr_always_run", "1", CVAR_ARCHIVE);
-	vr_crouch_toggle = Cvar_Get ("vr_crouch_toggle", "0", CVAR_ARCHIVE);
-	vr_irl_crouch_enabled = Cvar_Get ("vr_irl_crouch_enabled", "0", CVAR_ARCHIVE);
-	vr_irl_crouch_to_stand_ratio = Cvar_Get ("vr_irl_crouch_to_stand_ratio", "0.65", CVAR_ARCHIVE);
-	vr_saber_block_debounce_time = Cvar_Get ("vr_saber_block_debounce_time", "200", CVAR_ARCHIVE);
-	vr_haptic_intensity = Cvar_Get ("vr_haptic_intensity", "1.0", CVAR_ARCHIVE);
-	vr_comfort_vignette = Cvar_Get ("vr_comfort_vignette", "0.0", CVAR_ARCHIVE);
-	vr_saber_3rdperson_mode = Cvar_Get ("vr_saber_3rdperson_mode", "1", CVAR_ARCHIVE);
-	vr_vehicle_use_hmd_direction = Cvar_Get ("vr_vehicle_use_hmd_direction", "0", CVAR_ARCHIVE);
-	vr_vehicle_use_3rd_person = Cvar_Get ("vr_vehicle_use_3rd_person", "0", CVAR_ARCHIVE);
-	vr_vehicle_use_controller_for_speed = Cvar_Get ("vr_vehicle_use_controller_for_speed", "1", CVAR_ARCHIVE);
-	vr_gesture_triggered_use = Cvar_Get ("vr_gesture_triggered_use", "1", CVAR_ARCHIVE);
-	vr_use_gesture_boundary = Cvar_Get ("vr_use_gesture_boundary", "0.35", CVAR_ARCHIVE);
-	vr_align_weapons = Cvar_Get ("vr_align_weapons", "0", CVAR_ARCHIVE);
-	vr_refresh = Cvar_Get ("vr_refresh", "72", CVAR_ARCHIVE);
-	vr_super_sampling = Cvar_Get ("vr_super_sampling", "1.0", CVAR_ARCHIVE);
-
-    vr.menu_right_handed = vr_control_scheme->integer == 0;
 
 #ifdef ANDROID
     Cvar_Get("openXRHMD", gAppState.OpenXRHMD, CVAR_ARCHIVE);
@@ -917,12 +817,6 @@ void VR_FrameSetup()
 
     mat4 head = snapTurnMat * mat4(vrOrientation, vec3(0));
 
-    if (refresh != vr_refresh->value)
-    {
-        refresh = vr_refresh->value;
-        VR_SetRefreshRate(vr_refresh->value);
-    }
-
     if (leftTrackedRemoteState_new.Buttons & xrButton_LThumb)
     {
         forceUpdatePose = true;
@@ -935,13 +829,39 @@ void VR_FrameSetup()
     {
         static vec3 prevPos;
         lara = (Lara *) inventory->game->getLara();
-        lara->velocity_6dof.x = (vrPosition - prevPos).x;
-        lara->velocity_6dof.z = -(vrPosition - prevPos).z;
-        lara->velocity_6dof *= 1000;
-        lara->velocity_6dof = lara->velocity_6dof.rotateY(DEG2RAD * Input::hmd.extrarot);
+
+        if (lara->camera->firstPerson)
+        {
+            //Bit of a hack, but if Lara uses an item (not a med kit), don't re-enable 6dof until she returns to a valid state
+            static bool usedItem = false;
+            if (lara->usedItem != TR::Entity::NONE)
+            {
+                usedItem = lara->usedItem != TR::Entity::INV_MEDIKIT_SMALL &&
+                    lara->usedItem != TR::Entity::INV_MEDIKIT_BIG;
+            }
+
+            //Only apply 6dof in certain scenarios
+            if (lara->state == Lara::STATE_WALK ||
+                lara->state == Lara::STATE_RUN ||
+                lara->state == Lara::STATE_STOP)
+            {
+                if (!usedItem)
+                {
+                    lara->velocity_6dof.x = (vrPosition - prevPos).x;
+                    lara->velocity_6dof.z = -(vrPosition - prevPos).z;
+                    lara->velocity_6dof *= 1000;
+                    lara->velocity_6dof = lara->velocity_6dof.rotateY(DEG2RAD * Input::hmd.extrarot);
+                }
+            }
+            else
+            {
+                //We've now started the used item animation
+                usedItem = false;
+            }
+        }
+
         prevPos = vrPosition;
     }
-
 
     Input::hmd.head = head;
     if (Input::hmd.zero.x == INF || forceUpdatePose)
@@ -968,7 +888,6 @@ void VR_FrameSetup()
 
     Input::hmd.setView(pL, pR, vL, vR);
 }
-
 
 
 #ifdef ANDROID
@@ -1138,18 +1057,13 @@ void VR_HapticDisable()
  */
 void VR_HapticEvent(const char* event, int position, int flags, int intensity, float angle, float yHeight )
 {
-	if (vr_haptic_intensity->value == 0.0f)
-	{
-		return;
-	}
-
 	//Pass on to any external services
 	VR_ExternalHapticEvent(event, position, flags, intensity, angle, yHeight);
 
 	float fIntensity = intensity / 100.0f;
 
 	//Controller Haptic Support
-	int weaponFireChannel = vr.weapon_stabilised ? 3 : (vr_control_scheme->integer ? 2 : 1);
+	int weaponFireChannel = /*vr.weapon_stabilised*/ false ? 3 : (Core::settings.detail.handedness == 1 ? 2 : 1);
 
 	if (flags != 0)
 	{
@@ -1163,7 +1077,7 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 	}
 	else if (strcmp(event, "weapon_switch") == 0)
 	{
-		TBXR_Vibrate(250, vr_control_scheme->integer ? 2 : 1, 0.8);
+		TBXR_Vibrate(250, Core::settings.detail.handedness == 1 ? 2 : 1, 0.8);
 	}
 	else if (strcmp(event, "shotgun") == 0 || strcmp(event, "fireball") == 0)
 	{
@@ -1175,29 +1089,6 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 	}
 	else if (strcmp(event, "chainsaw_fire") == 0) // Saber
 	{
-		//Special handling for dual sabers / melee
-		if (vr.dualsabers)
-		{
-			if (position == 4 ||
-					position == 0) // both hands
-			{
-				weaponFireChannel = 3;
-			}
-			else if (position == 1) // left hand
-			{
-				weaponFireChannel = 2;
-			}
-			else if (position == 2) // right hand
-			{
-				weaponFireChannel = 1;
-			}
-			else
-			{
-				//no longer need to trigger haptic
-				return;
-			}
-		}
-
 		TBXR_Vibrate(300, weaponFireChannel, fIntensity);
 	}
 	else if (strcmp(event, "RTCWQuest:fire_tesla") == 0) // Weapon power build up
@@ -1243,7 +1134,7 @@ void VR_HandleControllerInput() {
                 {
                     if (increaseSnap)
                     {
-                        Input::hmd.extrarot -= vr_turn_angle->value;
+                        Input::hmd.extrarot -= 45.f;
                         increaseSnap = false;
                         if (Input::hmd.extrarot < -180.0f)
                         {
@@ -1264,7 +1155,7 @@ void VR_HandleControllerInput() {
                 {
                     if (decreaseSnap)
                     {
-                        Input::hmd.extrarot += vr_turn_angle->value;
+                        Input::hmd.extrarot += 45.f;
                         decreaseSnap = false;
 
                         if (Input::hmd.extrarot > 180.0f)
@@ -1331,7 +1222,20 @@ void VR_HandleControllerInput() {
                          rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
     }
 
-    if (laraState == Lara::STATE_SWIM ||
+    static bool hoppingBack = false;
+    vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+    //Allow Lara to hop back if walking is pressed and she's currently stood still
+    if (hoppingBack || 
+        ((laraState == Lara::STATE_STOP ||
+        laraState == Lara::STATE_FAST_BACK) &&
+        joy.quadrant() == 2 &&
+        walkingEnabled))
+    {
+        Input::setJoyPos(joyRight, jkL, vec2(0, 1));
+        walkingEnabled = false;
+        hoppingBack = joy.length() > 0.001f;
+    }
+    else if (laraState == Lara::STATE_SWIM ||
         laraState == Lara::STATE_TREAD ||
         laraState == Lara::STATE_GLIDE)
     {
@@ -1347,7 +1251,6 @@ void VR_HandleControllerInput() {
               laraState == Lara::STATE_WALK ||
               laraState == Lara::STATE_FORWARD_JUMP))
     {
-        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
         //deadzone
         if (joy.length() > 0.2f)
         {
@@ -1355,12 +1258,11 @@ void VR_HandleControllerInput() {
             addMat.identity();
             float additionalDirAngle =
                     atan2(joy.x,
-                          joy.y);
+                            joy.y);
             addMat.rotateY(-additionalDirAngle);
-            Input::hmd.head.setRot((addMat* Input::hmd.body).getRot());
+            Input::hmd.head.setRot((addMat * Input::hmd.body).getRot());
         }
-        else if (laraState == Lara::STATE_RUN ||
-                 laraState == Lara::STATE_WALK)
+        else if (laraState == Lara::STATE_RUN)
         {
             lara->animation.setAnim(Lara::ANIM_STAND);
             lara->state = Lara::STATE_STOP;
@@ -1374,8 +1276,6 @@ void VR_HandleControllerInput() {
     else if (!inventory->isActive())
     {
         //now adjust movement direction based on thumbstick direction
-        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-
         //deadzone
         if (joy.length() > 0.2f)
         {
@@ -1531,9 +1431,36 @@ void VR_HandleControllerInput() {
         Input::setDown(ikT, speed & 1);
         Input::setDown(ikR, speed & 2);
 
-        if (lara && (rightTrackedRemoteState_new.Touches & xrButton_ThumbRest) && !(rightTrackedRemoteState_old.Touches & xrButton_ThumbRest))
+        if (lara && (rightTrackedRemoteState_new.Touches & xrButton_ThumbRest))
         {
-            lara->camera->changeView(!lara->camera->firstPerson);
+            vec2 leftJoy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+            int quadrant = leftJoy.quadrant();
+            static bool allowToggleCheat = false;
+            if (!allowToggleCheat)
+            {
+                if (leftJoy.length() < 0.2)
+                {
+                    allowToggleCheat = true;
+                }
+            }
+            else
+            {
+                if (leftJoy.length() > 0.2)
+                {
+                    if (quadrant == 0)
+                    {
+                        lara->camera->changeView(!lara->camera->firstPerson);
+                    }
+                    else if (quadrant == 2)
+                    {
+                        Game::level->killAllEnemies();
+
+                    }
+
+                    allowToggleCheat = false;
+                }
+            }
+            
         }
 
         if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
@@ -1583,7 +1510,7 @@ void VR_HandleControllerInput() {
         }
     }
 
-    float rotation = -vr_weapon_pitchadjust->value;
+    float rotation = 45.0f;
     if (gAppState.controllersPresent == VIVE_CONTROLLERS)
     {
         rotation += -33.6718750f;

@@ -1803,6 +1803,17 @@ struct Level : IGame {
         }
     }
 
+    void killAllEnemies() {
+        for (int i = 0; i < level.entitiesBaseCount; i++) {
+            TR::Entity& e = level.entities[i];
+
+            if (e.isEnemy())
+            {
+                ((Character*)e.controller)->health = 0;
+            }
+        }
+    }
+
     void setMainLight(Controller *controller) {
         Core::lightPos[0]   = controller->mainLightPos;
         Core::lightColor[0] = vec4(controller->mainLightColor.xyz(), 1.0f / controller->mainLightColor.w);

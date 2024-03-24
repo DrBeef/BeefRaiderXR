@@ -73,6 +73,7 @@ struct Lara : Character {
     // http://www.tombraiderforums.com/showthread.php?t=148859
     enum {
         ANIM_RUN                = 0,
+        ANIM_WALK               = 1,
 
         ANIM_STAND_LEFT         = 2,
         ANIM_STAND_RIGHT        = 3,
@@ -4084,8 +4085,8 @@ struct Lara : Character {
     bool hideHead()
     {
         //Not sure about this..
-        if (state == STATE_BACK_JUMP || state == STATE_LEFT_JUMP || state == STATE_RIGHT_JUMP || state == STATE_HANDSTAND || state == STATE_SWAN_DIVE)
-            return false;
+//        if (state == STATE_BACK_JUMP || state == STATE_LEFT_JUMP || state == STATE_RIGHT_JUMP || state == STATE_HANDSTAND || state == STATE_SWAN_DIVE)
+//            return false;
 
         if (Core::pass != Core::passShadow && camera->firstPerson && camera->viewIndex == -1 && game->getCamera() == camera)
             return true;

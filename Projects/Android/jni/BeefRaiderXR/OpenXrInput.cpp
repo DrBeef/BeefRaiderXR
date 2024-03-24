@@ -1,5 +1,5 @@
-#include "VrInput.h"
-#include "VrCvars.h"
+#include "VrCommon.h"
+
 #include <string>
 #include <cstring>
 #include <map>
@@ -132,44 +132,6 @@ float VectorNormalize( vec3_t vec )
 
 	return length;
 }
-
-cvar_t	*vr_turn_mode;
-cvar_t	*vr_turn_angle;
-cvar_t	*vr_positional_factor;
-cvar_t	*vr_walkdirection;
-cvar_t	*vr_weapon_pitchadjust;
-cvar_t	*vr_control_scheme;
-cvar_t	*vr_virtual_stock;
-cvar_t	*vr_switch_sticks;
-cvar_t	*vr_immersive_cinematics;
-cvar_t	*vr_screen_dist;
-cvar_t   *vr_weapon_velocity_trigger;
-cvar_t   *vr_scope_engage_distance;
-cvar_t   *vr_force_velocity_trigger;
-cvar_t   *vr_force_distance_trigger;
-cvar_t   *vr_two_handed_weapons;
-cvar_t   *vr_force_motion_controlled;
-cvar_t   *vr_force_motion_push;
-cvar_t   *vr_force_motion_pull;
-cvar_t   *vr_motion_enable_saber;
-cvar_t   *vr_always_run;
-cvar_t   *vr_crouch_toggle;
-cvar_t   *vr_irl_crouch_enabled;
-cvar_t   *vr_irl_crouch_to_stand_ratio;
-cvar_t   *vr_saber_block_debounce_time;
-cvar_t   *vr_haptic_intensity;
-cvar_t   *vr_comfort_vignette;
-cvar_t   *vr_saber_3rdperson_mode;
-cvar_t   *vr_vehicle_use_hmd_direction;
-cvar_t   *vr_vehicle_use_3rd_person;
-cvar_t   *vr_vehicle_use_controller_for_speed;
-cvar_t   *vr_gesture_triggered_use;
-cvar_t   *vr_use_gesture_boundary;
-cvar_t   *vr_align_weapons; // Only used for development
-cvar_t   *vr_refresh;
-cvar_t   *vr_super_sampling;
-
-
 
 XrActionSuggestedBinding ActionSuggestedBinding(XrAction action, XrPath path) {
     XrActionSuggestedBinding asb;
@@ -887,7 +849,6 @@ void TBXR_UpdateControllers( )
     leftRemoteTracking_new = gAppState.TrackedController[0];
     rightRemoteTracking_new = gAppState.TrackedController[1];
 
-
     //button mapping
     leftTrackedRemoteState_new.Buttons = 0;
     leftTrackedRemoteState_new.Touches = 0;
@@ -1065,7 +1026,7 @@ void TBXR_Vibrate( int duration, int chan, float intensity )
                 return;
 
             vibration_channel_duration[channel] = duration;
-            vibration_channel_intensity[channel] = intensity * vr_haptic_intensity->value;
+            vibration_channel_intensity[channel] = intensity;
         }
     }
 }

@@ -292,7 +292,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\BeefRaiderXR\BeefRaiderXR_Main.cpp" />
     <ClCompile Include="..\..\..\..\BeefRaiderXR\OpenXrInput.cpp" />
-    <ClCompile Include="..\..\..\..\BeefRaiderXR\VrInputCommon.cpp" />
     <ClCompile Include="..\..\..\..\BeefRaiderXR\windows\TBXR_Common.cpp" />
     <ClCompile Include="..\..\libs\minimp3\minimp3.cpp" />
     <ClCompile Include="..\..\libs\stb_vorbis\stb_vorbis.c" />

@@ -11,8 +11,8 @@
 #include <cstring>
 
 #include "argtable3.h"
-#include "VrInput.h"
-#include "VrCvars.h"
+
+#include "VrCommon.h"
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -26,7 +26,6 @@
 #define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
 #define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))
 
-#include "VrInput.h"
 #include "VrCommon.h"
 
 #if !defined( EGL_OPENGL_ES3_BIT_KHR )
@@ -1731,7 +1730,6 @@ void TBXR_Recenter() {
 		XrSpaceLocation loc = {};
 		loc.type = XR_TYPE_SPACE_LOCATION;
 		OXR(xrLocateSpace(gAppState.ViewSpace, gAppState.StageSpace, gAppState.FrameState.predictedDisplayTime, &loc));
-		QuatToYawPitchRoll(loc.pose.orientation, rotation, vr.hmdorientation);
 	}
 
 	// Delete previous space instances
@@ -1843,8 +1841,8 @@ void TBXR_FrameSetup()
 	beginFrameDesc.next = NULL;
 	OXR(xrBeginFrame(gAppState.Session, &beginFrameDesc));
 
-	//Get controller state here
-	TBXR_GetHMDOrientation();
+    TBXR_updateProjections();
+    TBXR_GetHMDOrientation();
 
     //Game specific frame setup stuff called here
     VR_FrameSetup();
@@ -1886,19 +1884,12 @@ void TBXR_ClearFrameBuffer(int width, int height)
 void VR_prepareEyeBuffer(int eye );
 void TBXR_prepareEyeBuffer(int eye )
 {
-	vr.eye = eye;
 	ovrFramebuffer* frameBuffer = &(gAppState.Renderer.FrameBuffer[eye]);
 	ovrFramebuffer_Acquire(frameBuffer);
 	ovrFramebuffer_SetCurrent(frameBuffer);
 	TBXR_ClearFrameBuffer(frameBuffer->ColorSwapChain.Width, frameBuffer->ColorSwapChain.Height);
 
 	ovrFramebuffer_Acquire(&gAppState.Renderer.NullFrameBuffer);
-
-	//Seems odd, but used to move the HUD elements to be central on the player's view
-	//HMDs with a symmetric fov (like the PICO) will have 0 in this value, but the Meta Quest
-	//will have an asymmetric fov and the HUD would be very misaligned as a result
-	vr.off_center_fov_x = -(gAppState.Views[eye].fov.angleLeft + gAppState.Views[eye].fov.angleRight) / 2.0f;
-	vr.off_center_fov_y = -(gAppState.Views[eye].fov.angleUp + gAppState.Views[eye].fov.angleDown) / 2.0f;
 
     VR_prepareEyeBuffer(eye);
 }
@@ -1952,13 +1943,6 @@ void TBXR_submitFrame()
 		return;
 	}
 
-	TBXR_updateProjections();
-
-	//Calculate the maximum extent fov for use in culling in the engine (we won't want to cull inside this fov)
-	vr.fov_x = (fabs(gAppState.Views[0].fov.angleLeft) + fabs(gAppState.Views[1].fov.angleRight)) * 180.0f / M_PI;
-	vr.fov_y = (fabs(gAppState.Views[0].fov.angleUp) + fabs(gAppState.Views[0].fov.angleDown)) * 180.0f / M_PI;
-
-
 	XrFrameEndInfo endFrameInfo = {};
 	endFrameInfo.type = XR_TYPE_FRAME_END_INFO;
 	endFrameInfo.displayTime = gAppState.FrameState.predictedDisplayTime;
@@ -1994,19 +1978,10 @@ void TBXR_submitFrame()
 
 		for (int eye = 0; eye < ovrMaxNumEyes; eye++) 
 		{
-			XrFovf fov = gAppState.Views[eye].fov;
-			if (vr.cgzoommode)
-			{
-				fov.angleLeft /= ZOOM_FOV_ADJUST;
-				fov.angleRight /= ZOOM_FOV_ADJUST;
-				fov.angleUp /= ZOOM_FOV_ADJUST;
-				fov.angleDown /= ZOOM_FOV_ADJUST;
-			}
-
 			memset(&projection_layer_elements[eye], 0, sizeof(XrCompositionLayerProjectionView));
 			projection_layer_elements[eye].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
 			projection_layer_elements[eye].pose = gAppState.Views[eye].pose;
-			projection_layer_elements[eye].fov = fov;
+			projection_layer_elements[eye].fov = gAppState.Views[eye].fov;
 			projection_layer_elements[eye].subImage.swapchain = gAppState.Renderer.FrameBuffer[eye].ColorSwapChain.Handle;
 			projection_layer_elements[eye].subImage.imageRect.extent.width = gAppState.Renderer.FrameBuffer[eye].ColorSwapChain.Width;
 			projection_layer_elements[eye].subImage.imageRect.extent.height = gAppState.Renderer.FrameBuffer[eye].ColorSwapChain.Height;
@@ -2061,11 +2036,11 @@ void TBXR_submitFrame()
 		quad_layer.subImage.imageRect.extent.height = height;
 		const XrVector3f axis = { 0.0f, 1.0f, 0.0f };
 		XrVector3f pos = {
-				gAppState.xfStageFromHead.position.x - sin(DEG2RAD(vr.hmdorientation_snap[YAW])) * VR_GetScreenLayerDistance(),
+				gAppState.xfStageFromHead.position.x - sin(DEG2RAD(hmdorientation_snap[YAW])) * VR_GetScreenLayerDistance(),
 				1.0f,
-				gAppState.xfStageFromHead.position.z - cos(DEG2RAD(vr.hmdorientation_snap[YAW])) * VR_GetScreenLayerDistance()
+				gAppState.xfStageFromHead.position.z - cos(DEG2RAD(hmdorientation_snap[YAW])) * VR_GetScreenLayerDistance()
 		};
-		quad_layer.pose.orientation = XrQuaternionf_CreateFromVectorAngle(axis, DEG2RAD(vr.hmdorientation_snap[YAW]));
+		quad_layer.pose.orientation = XrQuaternionf_CreateFromVectorAngle(axis, DEG2RAD(hmdorientation_snap[YAW]));
 		quad_layer.pose.position = pos;
 		XrExtent2Df size = { 6.0f, 5.5f };
 		quad_layer.size = size;

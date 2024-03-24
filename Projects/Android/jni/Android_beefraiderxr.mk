@@ -36,7 +36,6 @@ LOCAL_C_INCLUDES :=  $(BEEFRAIDERXR_BASE_C_INCLUDES) $(TOP_DIR)
 BEEFRAIDERXR_SRC_FILES :=  ${BEEFRAIDERXR_PATH}/BeefRaiderXR_Main.cpp \
        ${BEEFRAIDERXR_PATH}/android/TBXR_Common.cpp \
        ${BEEFRAIDERXR_PATH}/android/argtable3.c \
-       ${BEEFRAIDERXR_PATH}/VrInputCommon.cpp \
        ${BEEFRAIDERXR_PATH}/OpenXrInput.cpp \
        ${OPENLARA_PATH}/src/libs/tinf/tinflate.c \
        ${OPENLARA_PATH}/src/libs/stb_vorbis/stb_vorbis.c \

@@ -7,9 +7,6 @@
     <ClCompile Include="..\..\..\..\BeefRaiderXR\OpenXrInput.cpp">
       <Filter>BeefRaiderXR</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BeefRaiderXR\VrInputCommon.cpp">
-      <Filter>BeefRaiderXR</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\BeefRaiderXR\windows\TBXR_Common.cpp">
       <Filter>BeefRaiderXR</Filter>
     </ClCompile>

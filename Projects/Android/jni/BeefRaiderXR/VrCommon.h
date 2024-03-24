@@ -15,7 +15,6 @@ struct cvar_t {
 typedef float vec2_t[2];
 typedef float vec3_t[3];
 
-
 #define VectorSubtract( a,b,c )   ( ( c )[0] = ( a )[0] - ( b )[0],( c )[1] = ( a )[1] - ( b )[1],( c )[2] = ( a )[2] - ( b )[2] )
 #define VectorAdd( a,b,c )        ( ( c )[0] = ( a )[0] + ( b )[0],( c )[1] = ( a )[1] + ( b )[1],( c )[2] = ( a )[2] + ( b )[2] )
 #define VectorClear( a )         ( ( a )[0] = 0,( a )[1] = 0,( a )[2] = 0 )
@@ -32,8 +31,6 @@ int Sys_Milliseconds ();
 cvar_t *Cvar_Get(const char* name, const char* value, int type);
 float Cvar_VariableValue(const char* name);
 
-#include "VrClientInfo.h"
-
 #ifdef _WIN32
 #include "windows/TBXR_Common.h"
 #else
@@ -42,12 +39,16 @@ float Cvar_VariableValue(const char* name);
 
 
 extern long long global_time;
-extern int ducked;
-extern vr_client_info_t vr;
 
-float length(float x, float y);
-bool between(float min, float val, float max);
+extern ovrInputStateTrackedRemote leftTrackedRemoteState_old;
+extern ovrInputStateTrackedRemote leftTrackedRemoteState_new;
+extern ovrTrackedController leftRemoteTracking_new;
+extern ovrInputStateTrackedRemote rightTrackedRemoteState_old;
+extern ovrInputStateTrackedRemote rightTrackedRemoteState_new;
+extern ovrTrackedController rightRemoteTracking_new;
+
+extern vec3_t hmdorientation_snap;
+
 void QuatToYawPitchRoll(XrQuaternionf q, vec3_t rotation, vec3_t out);
-void handleTrackedControllerButton(ovrInputStateTrackedRemote * trackedRemoteState, ovrInputStateTrackedRemote * prevTrackedRemoteState, uint32_t button, int key);
 
 #endif //vrcommon_h
