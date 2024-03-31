@@ -830,6 +830,9 @@ void VR_FrameSetup()
         static vec3 prevPos;
         lara = (Lara *) inventory->game->getLara();
 
+        //Reset here, if we don't then it can break things otherwise
+        lara->velocity_6dof = vec2(0.f);
+
         if (lara->camera->firstPerson)
         {
             //Bit of a hack, but if Lara uses an item (not a med kit), don't re-enable 6dof until she returns to a valid state
