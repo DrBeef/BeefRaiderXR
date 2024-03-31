@@ -2586,8 +2586,28 @@ struct Level : IGame {
 
                 for (int i = 0; i < roomsCount; i++)
                     level.rooms[roomsList[i].index].flags.visible = true;
-            } else
-                getVisibleRooms(roomsList, roomsCount, TR::NO_ROOM, roomIndex, vec4(-1.0f, -1.0f, 1.0f, 1.0f), water);
+            }
+            else
+            {
+                if (camera->firstPerson)
+                {
+                    //Use this to set things like the water flag / cache
+                    getVisibleRooms(roomsList, roomsCount, TR::NO_ROOM, roomIndex, vec4(-1.0f, -1.0f, 1.0f, 1.0f), water);
+
+                    //Now just set all rooms to be drawn!
+                    for (int i = 0; i < level.roomsCount; i++)
+                    {
+                        roomsList[i] = RoomDesc(i, vec4(-1.0f, -1.0f, 1.0f, 1.0f));
+                        level.rooms[i].flags.visible = true;
+                        roomsCount = level.roomsCount;
+                    }
+                }
+                else
+                {
+                    getVisibleRooms(roomsList, roomsCount, TR::NO_ROOM, roomIndex, vec4(-1.0f, -1.0f, 1.0f, 1.0f), water);
+                }
+            }
+                
         }
 
         if (water && waterCache) {
