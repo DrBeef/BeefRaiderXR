@@ -1874,10 +1874,6 @@ void TBXR_ClearFrameBuffer(int width, int height)
 
 	glScissor( 0, 0, 0, 0 );
 	glDisable( GL_SCISSOR_TEST );
-
-	//This is a bit of a hack, but we need to do this to correct for the fact that the engine uses linear RGB colorspace
-	//but openxr uses SRGB (or something, must admit I don't really understand, but adding this works to make it look good again)
-	glDisable( GL_FRAMEBUFFER_SRGB );
 }
 
 
@@ -1887,7 +1883,11 @@ void TBXR_prepareEyeBuffer(int eye )
 	ovrFramebuffer* frameBuffer = &(gAppState.Renderer.FrameBuffer[eye]);
 	ovrFramebuffer_Acquire(frameBuffer);
 	ovrFramebuffer_SetCurrent(frameBuffer);
-	TBXR_ClearFrameBuffer(frameBuffer->ColorSwapChain.Width, frameBuffer->ColorSwapChain.Height);
+	//TBXR_ClearFrameBuffer(frameBuffer->ColorSwapChain.Width, frameBuffer->ColorSwapChain.Height);
+
+    //This is a bit of a hack, but we need to do this to correct for the fact that the engine uses linear RGB colorspace
+    //but openxr uses SRGB (or something, must admit I don't really understand, but adding this works to make it look good again)
+    glDisable( GL_FRAMEBUFFER_SRGB );
 
 	ovrFramebuffer_Acquire(&gAppState.Renderer.NullFrameBuffer);
 
@@ -1900,11 +1900,13 @@ void TBXR_finishEyeBuffer(int eye )
 
 	ovrFramebuffer *frameBuffer = &(renderer->FrameBuffer[eye]);
 
+    /*
 	// Clear the alpha channel, other way OpenXR would not transfer the framebuffer fully
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+     */
 
 	ovrFramebuffer_Release(&gAppState.Renderer.NullFrameBuffer);
 
