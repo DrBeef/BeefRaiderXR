@@ -3153,7 +3153,7 @@ struct Level : IGame {
 
         // ## INVENTORY BACKGROUND CHANGE
         needRenderGame = !inventory->video && !level.isTitle();// && ((inventory->phaseRing < 1.0f && inventory->titleTimer <= 1.0f) || needRedrawTitleBG);
-        needRenderInventory = inventory->video || level.isTitle() || inventory->phaseRing > 0.0f || inventory->titleTimer > 0.0f;
+        needRenderInventory = inventory->video || level.isTitle() || inventory->phaseRing > 0.0f || inventory->titleTimer > 0.0f || inventory->exitCredits;
 
         bool title  = inventory->isActive() || level.isTitle();
         bool copyBg = title && (lastTitle != title || needRedrawTitleBG);
@@ -3466,18 +3466,22 @@ struct Level : IGame {
             inventory->renderBackground(max(0, view));
         }
 
-        setupBinding();
-        atlasObjects->bind(sDiffuse);
-        inventory->render(aspect);
+        if (!inventory->exitCredits)
+        {
+            setupBinding();
+            atlasObjects->bind(sDiffuse);
+            inventory->render(aspect);
 
-        UI::begin(aspect);
-        atlasGlyphs->bind(sDiffuse);
-        if (!inventory->video) {
-            inventory->renderUI();
-        } else {
-            UI::renderSubs();
+            UI::begin(aspect);
+            atlasGlyphs->bind(sDiffuse);
+            if (!inventory->video) {
+                inventory->renderUI();
+            }
+            else {
+                UI::renderSubs();
+            }
+            UI::end();
         }
-        UI::end();
 
         Core::popLights();
 

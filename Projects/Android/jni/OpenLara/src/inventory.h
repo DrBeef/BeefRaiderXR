@@ -252,6 +252,8 @@ struct Inventory {
     bool    playLogo;
     bool    playVideo;
 
+    int    exitCredits;
+
     bool    active;
     bool    chosen;
     float   phaseRing, phasePage, phaseChoose, phaseSelect;
@@ -593,6 +595,29 @@ struct Inventory {
 
     } *items[INV_MAX_ITEMS];
 
+    struct CreditsUserData
+    {
+        Inventory* inv;
+        int page;
+    };
+
+    static void loadExitCredits(Stream *stream, void *userData) {
+
+
+        Inventory *inv = ((CreditsUserData*)userData)->inv;
+
+        if (!stream) {
+            inv->titleTimer = 0.0f;
+            return;
+        }
+        inv->titleTimer = 2.0f;
+        inv->title = Texture::Load(*stream);
+        inv->background[0] = inv->title;
+        inv->exitCredits = ((CreditsUserData*)userData)->page;
+
+        delete stream;
+    }
+
     static void loadTitleBG(Stream *stream, void *userData) {
         Inventory *inv = (Inventory*)userData;
 
@@ -741,9 +766,16 @@ struct Inventory {
         new Stream(playVideo ? TR::getGameVideo(game->getLevel()->id) : NULL, loadVideo, this);
     }
 
+    void startExitCredits(int page) {
+        CreditsUserData data = {this, page};
+        new Stream(TR::getCreditsScreen(page), loadExitCredits, &data);
+    }
+
     void init(bool playLogo, bool playVideo) {
         active    = false;
         phaseRing = 0.0f;
+
+        exitCredits = 0;
 
         this->playLogo  = playLogo;
         this->playVideo = playVideo;
@@ -1072,7 +1104,7 @@ struct Inventory {
                         if (!level->isTitle())
                             nextLevel = level->getTitleId();
                         else
-                            Core::quit(); // exit game
+                            startExitCredits(1);
                         break;
                 }
 
@@ -1177,6 +1209,17 @@ struct Inventory {
             titleTimer -= Core::deltaTime;
             if (titleTimer < 0.0f)
                 titleTimer = 0.0f;
+        }
+
+        if (exitCredits == 1 && titleTimer == 0.0f)
+        {
+            startExitCredits(2);
+            return;
+        }
+        if (exitCredits == 2 && titleTimer == 0.0f)
+        {
+            Core::quit();
+            return;
         }
 
         if (!isActive()) {

@@ -205,6 +205,10 @@ import java.util.Vector;
 		//Copy the command line params file
 		copy_asset("/sdcard/BeefRaiderXR", "commandline.txt", false);
 
+		//Credits images
+		copy_asset("/sdcard/BeefRaiderXR", "CREDITS1.PNG", true);
+		copy_asset("/sdcard/BeefRaiderXR", "CREDITS2.PNG", true);
+
 		if (!new File("/sdcard/BeefRaiderXR/nocopy").exists())
 		{
 			//Copy demo files

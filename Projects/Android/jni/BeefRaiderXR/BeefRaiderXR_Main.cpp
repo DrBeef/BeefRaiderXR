@@ -974,6 +974,8 @@ void * AppThreadFunction(void * parm ) {
 
     Game::deinit();
 
+    VR_Shutdown();
+
 	return NULL;
 }
 

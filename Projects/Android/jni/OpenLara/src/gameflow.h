@@ -1368,6 +1368,18 @@ namespace TR {
         new Stream(title, callback, userData);
     }
 
+    const char* getCreditsScreen(int page) {
+        switch (page) {
+                // TR1
+            case 1:
+                CHECK_FILE("CREDITS1.PNG");      // BeefRaiderXR credits
+                break;
+            case 2:
+                CHECK_FILE("CREDITS2.PNG");      // BeefRaiderXR credits
+                break;
+        }
+    }
+
     const char* getGameScreen(LevelID id) {
         switch (id) {
         // TR1
