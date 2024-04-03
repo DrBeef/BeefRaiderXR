@@ -6631,7 +6631,7 @@ namespace TR {
             return room.sectors[sectorIndex = (x * room.zSectors + z)];
         }
         
-        Room::Sector* getSector(int16 &roomIndex, const vec3 &pos) {
+        Room::Sector* getSector(int16 &roomIndex, const vec3 &pos, bool firstPerson = false) {
             ASSERT(roomIndex >= 0 && roomIndex <= roomsCount);
 
             Room::Sector *sector = NULL;
@@ -6667,6 +6667,50 @@ namespace TR {
             while (sector->roomBelow != NO_ROOM && y >= sector->floor * 256) {
                 Room &room = rooms[roomIndex = sector->roomBelow];
                 sector = room.getSector((x - room.info.x) / 1024, (z - room.info.z) / 1024);
+            }
+
+            // An additional check added by DrBeef
+            // ===================================
+            // 
+            // If our viewpoint has broken through the y-bound of a room and even if that sector claims
+            // there is no room above or below, try to find the room we have now clipped into
+            // and get the sector for that
+            // 
+            // This only appears to be an issue in 1st person where the player's head can clip into blocks during an animation
+            // and the sector that covers the block doesn't define a room above or below so the normal code would retain
+            // the old room, which is now actually wrong as Lara's head has actually moved to a different room now
+            if (firstPerson)
+            {
+                Room& currentRoom = rooms[roomIndex];
+                if (prevRoom == roomIndex &&
+                    sector->roomAbove == NO_ROOM &&
+                    sector->roomBelow == NO_ROOM &&
+                    (y < currentRoom.info.yTop || y > currentRoom.info.yBottom))
+                {
+                    int ri = 0;
+                    while (ri < roomsCount)
+                    {
+                        //Find another room that has the same X/Z coords as the current room
+                        if (ri != roomIndex &&
+                            currentRoom.info.x == rooms[ri].info.x &&
+                            currentRoom.info.z == rooms[ri].info.z)
+                        {
+                            if (rooms[ri].info.yBottom >= y && rooms[ri].info.yTop < y)
+                            {
+                                roomIndex = ri;
+                                break;
+                            }
+                        }
+
+                        ++ri;
+                    }
+
+                    //Did we move?, if so, then recursively call getSector with this new room
+                    if (prevRoom != roomIndex)
+                    {
+                        return getSector(roomIndex, pos);
+                    }
+                }
             }
 
             return sector;

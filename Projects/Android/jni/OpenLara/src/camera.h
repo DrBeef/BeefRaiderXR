@@ -662,11 +662,11 @@ struct Camera : ICamera {
         }
 
         Core::setViewProj(Core::mView, Core::mProj);
-        Core::viewPos = Core::mViewInv.getPos();
+        Core::viewPos = mViewInv.getPos();
 
         // update room for eye (with HMD offset)
         if (Core::settings.detail.isStereo())
-            level->getSector(eye.room, Core::viewPos.xyz());
+            level->getSector(eye.room, Core::viewPos.xyz(), firstPerson);
 
         frustum->pos = Core::viewPos.xyz();
         frustum->calcPlanes(Core::mViewProj);

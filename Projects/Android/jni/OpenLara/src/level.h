@@ -2516,15 +2516,20 @@ struct Level : IGame {
         room.flags.visible = true;
         roomsList[roomsCount++] = RoomDesc(to, viewPort);
 
-        vec4 clipPort;
+        vec4 clipPort = viewPort;
         for (int i = 0; i < room.portalsCount; i++) {
             TR::Room::Portal &p = room.portals[i];
 
             if (Core::pass == Core::passCompose && water && waterCache && (level.rooms[to].flags.water ^ level.rooms[p.roomIndex].flags.water))
                 waterCache->setVisible(to, p.roomIndex);
 
-            if (from != room.portals[i].roomIndex && checkPortal(room, p, viewPort, clipPort))
+            //In first person always draw portal adjacent rooms even if they are behind us as sometimes entities (doors) project
+             //into the current room from a portal room behind us
+            if ((camera->firstPerson && from == TR::NO_ROOM) ||
+                (from != room.portals[i].roomIndex && checkPortal(room, p, viewPort, clipPort)))
+            {
                 getVisibleRooms(roomsList, roomsCount, to, p.roomIndex, clipPort, water, count + 1);
+            }
         }
     }
 
@@ -2589,23 +2594,7 @@ struct Level : IGame {
             }
             else
             {
-                if (camera->firstPerson)
-                {
-                    //Use this to set things like the water flag / cache
-                    getVisibleRooms(roomsList, roomsCount, TR::NO_ROOM, roomIndex, vec4(-1.0f, -1.0f, 1.0f, 1.0f), water);
-
-                    //Now just set all rooms to be drawn!
-                    for (int i = 0; i < level.roomsCount; i++)
-                    {
-                        roomsList[i] = RoomDesc(i, vec4(-1.0f, -1.0f, 1.0f, 1.0f));
-                        level.rooms[i].flags.visible = true;
-                        roomsCount = level.roomsCount;
-                    }
-                }
-                else
-                {
-                    getVisibleRooms(roomsList, roomsCount, TR::NO_ROOM, roomIndex, vec4(-1.0f, -1.0f, 1.0f, 1.0f), water);
-                }
+                getVisibleRooms(roomsList, roomsCount, TR::NO_ROOM, roomIndex, vec4(-1.0f, -1.0f, 1.0f, 1.0f), water);
             }
                 
         }
