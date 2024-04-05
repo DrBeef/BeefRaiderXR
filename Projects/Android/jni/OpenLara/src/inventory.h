@@ -610,7 +610,8 @@ struct Inventory {
             inv->titleTimer = 0.0f;
             return;
         }
-        inv->titleTimer = 2.0f;
+        int page = ((CreditsUserData*)userData)->page;
+        inv->titleTimer = 2.0f + page;
         inv->title = Texture::Load(*stream);
         inv->background[0] = inv->title;
         inv->exitCredits = ((CreditsUserData*)userData)->page;
@@ -1214,11 +1215,16 @@ struct Inventory {
         if (exitCredits == 1 && titleTimer == 0.0f)
         {
             startExitCredits(2);
-            return;
         }
         if (exitCredits == 2 && titleTimer == 0.0f)
         {
-            Core::quit();
+            Input::Joystick& joy = Input::joy[Core::settings.controls[playerIndex].joyIndex];
+            if (Input::down[ikCtrl] || Input::down[ikEnter] || Input::lastState[playerIndex] == cAction || joy.down[jkA])
+                Core::quit();
+        }
+
+        if (exitCredits)
+        {
             return;
         }
 
