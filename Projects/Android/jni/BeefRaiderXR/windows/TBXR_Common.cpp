@@ -153,9 +153,9 @@ static bool ovrFramebuffer_Create(
 }
 
 void ovrFramebuffer_Destroy(ovrFramebuffer* frameBuffer) {
-    GL(glDeleteFramebuffers(frameBuffer->TextureSwapChainLength, frameBuffer->FrameBuffers));
+	OXR(xrDestroySwapchain(frameBuffer->ColorSwapChain.Handle));
+	GL(glDeleteFramebuffers(frameBuffer->TextureSwapChainLength, frameBuffer->FrameBuffers));
     GL(glDeleteTextures(frameBuffer->TextureSwapChainLength, frameBuffer->DepthBuffers));
-    OXR(xrDestroySwapchain(frameBuffer->ColorSwapChain.Handle));
     free(frameBuffer->ColorSwapChainImage);
 
     free(frameBuffer->DepthBuffers);
@@ -768,6 +768,9 @@ void TBXR_EnterVR( ) {
 }
 
 void TBXR_LeaveVR( ) {
+
+	ovrRenderer_Destroy(&gAppState.Renderer);
+
 	if (gAppState.Session) {
 		OXR(xrDestroySpace(gAppState.ViewSpace));
 		OXR(xrDestroySpace(gAppState.LocalSpace));
@@ -775,8 +778,6 @@ void TBXR_LeaveVR( ) {
 		OXR(xrDestroySession(gAppState.Session));
 		gAppState.Session = NULL;
 	}
-
-	ovrRenderer_Destroy( &gAppState.Renderer );
 }
 
 void TBXR_InitRenderer(  ) {

@@ -974,6 +974,7 @@ void * AppThreadFunction(void * parm ) {
 
     Game::deinit();
 
+    TBXR_LeaveVR();
     VR_Shutdown();
 
 	return NULL;
@@ -1990,11 +1991,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
                 ContextSwap();
             }
-#ifdef _DEBUG
-            //Sleep(10);
-#endif
         }
     };
+
+    TBXR_LeaveVR();
 
     sndFree();
     Game::deinit();

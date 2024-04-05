@@ -1433,6 +1433,9 @@ void TBXR_EnterVR( ) {
 }
 
 void TBXR_LeaveVR( ) {
+
+    ovrRenderer_Destroy( &gAppState.Renderer );
+
 	if (gAppState.Session) {
 		OXR(xrDestroySpace(gAppState.ViewSpace));
 		OXR(xrDestroySpace(gAppState.LocalSpace));
@@ -1440,8 +1443,6 @@ void TBXR_LeaveVR( ) {
 		OXR(xrDestroySession(gAppState.Session));
 		gAppState.Session = NULL;
 	}
-
-	ovrRenderer_Destroy( &gAppState.Renderer );
 }
 
 void TBXR_InitRenderer(  ) {
