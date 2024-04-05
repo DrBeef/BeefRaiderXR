@@ -186,7 +186,7 @@ struct Camera : ICamera {
             targetAngle.x += PI;
             targetAngle.z = -targetAngle.z;
 
-            vec3 pos = joint.pos - joint.rot * vec3(0, 48, -24);
+            vec3 pos = joint.pos - joint.rot * vec3(0, 48, -40);
             quat rot = rotYXZ(targetAngle);
 
             fpHead.pos = pos;
@@ -194,12 +194,25 @@ struct Camera : ICamera {
         } else {
             fpHead = joint;
             fpHead.rot = fpHead.rot * quat(vec3(1, 0, 0), PI);
-            fpHead.pos -= joint.rot * vec3(0, 48, -24);
+            fpHead.pos -= joint.rot * vec3(0, 48, -40);
         }
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
             fpHead.rot = quat(vec3(1, 0, 0), PI);
         }
+
+        /*
+        //Now we make sure we don't clip through anything
+        vec3 opos = owner->pos;
+        opos.y = fpHead.pos.y;
+        vec3 t = opos + (fpHead.pos - opos).normal() * (2.0f * 1024.0f);
+        int room;
+        vec3 hitpos = owner->trace(owner->getRoomIndex(), opos, t, room, false);
+        if ((hitpos - opos).length() < (fpHead.pos - opos).length())
+        {
+            fpHead.pos = hitpos;
+        }
+        */
 
         mViewInv.identity();
         mViewInv.setRot(fpHead.rot);
@@ -666,7 +679,7 @@ struct Camera : ICamera {
 
         // update room for eye (with HMD offset)
         if (Core::settings.detail.isStereo())
-            level->getSector(eye.room, Core::viewPos.xyz(), firstPerson);
+            level->getSector(eye.room, Core::viewPos.xyz(), firstPerson && mode != MODE_CUTSCENE);
 
         frustum->pos = Core::viewPos.xyz();
         frustum->calcPlanes(Core::mViewProj);
