@@ -1375,7 +1375,7 @@ namespace TR {
                 CHECK_FILE("CREDITS1.PNG");      // BeefRaiderXR credits
                 break;
             case 2:
-                CHECK_FILE("CREDITS2.PNG");      // BeefRaiderXR credits
+                CHECK_FILE("CREDITS2.PNG");      // BeefRaiderXR gold patrons
                 break;
         }
     }
