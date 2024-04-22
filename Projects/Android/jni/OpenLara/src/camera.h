@@ -80,7 +80,7 @@ struct Camera : ICamera {
         lookAngle = vec3(0.0f);
 
         //Default to first person for now
-        changeView(true);
+        changeView(ICamera::POV_1ST_PERSON);
 
         if (level->isCutsceneLevel()) {
             mode = MODE_CUTSCENE;
@@ -179,14 +179,20 @@ struct Camera : ICamera {
         timer = 0.0f;
     }
 
-    bool updateFirstPerson() {
+    bool updateVRPointOfView() {
         Basis &joint = owner->getJoint(owner->jointHead);
+
+        int povOffset = 0;
+        if (pointOfView >= POV_3RD_PERSON_VR_1)
+        {
+            povOffset = 512 * pointOfView;
+        }
 
         if (mode != MODE_CUTSCENE && !owner->useHeadAnimation()) {
             targetAngle.x += PI;
             targetAngle.z = -targetAngle.z;
 
-            vec3 pos = joint.pos - joint.rot * vec3(0, 48, -40);
+            vec3 pos = joint.pos - joint.rot * vec3(0, 48, -40 + povOffset);
             quat rot = rotYXZ(targetAngle);
 
             fpHead.pos = pos;
@@ -194,29 +200,33 @@ struct Camera : ICamera {
         } else {
             fpHead = joint;
             fpHead.rot = fpHead.rot * quat(vec3(1, 0, 0), PI);
-            fpHead.pos -= joint.rot * vec3(0, 48, -40);
+            fpHead.pos -= joint.rot * vec3(0, 48, -40 + povOffset);
         }
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
             fpHead.rot = quat(vec3(1, 0, 0), PI);
         }
 
-        /*
+        
         //Now we make sure we don't clip through anything
         vec3 opos = owner->pos;
         opos.y = fpHead.pos.y;
-        vec3 t = opos + (fpHead.pos - opos).normal() * (2.0f * 1024.0f);
-        int room;
-        vec3 hitpos = owner->trace(owner->getRoomIndex(), opos, t, room, false);
+        /*vec3 hitpos = owner->trace(owner->getRoomIndex(), opos, t, room, false);
         if ((hitpos - opos).length() < (fpHead.pos - opos).length())
         {
             fpHead.pos = hitpos;
-        }
-        */
+        }*/
+
+        TR::Location from, to;
+        from.room = getRoomIndex();
+        from.pos = opos;
+        to.pos = fpHead.pos;
+        owner->trace(from, to);
+        
 
         mViewInv.identity();
         mViewInv.setRot(fpHead.rot);
-        mViewInv.setPos(fpHead.pos);
+        mViewInv.setPos(to.pos);
 
         eye.pos  = mViewInv.getPos();
         eye.room = owner->getRoomIndex();
@@ -403,7 +413,7 @@ struct Camera : ICamera {
                 }
             }
 
-            if (!firstPerson) {
+            if (pointOfView == POV_3RD_PERSON_ORIGINAL) {
                 TR::CameraFrame *frameA = &level->cameraFrames[indexA];
                 TR::CameraFrame *frameB = &level->cameraFrames[indexB];
 
@@ -427,7 +437,7 @@ struct Camera : ICamera {
 
                 mViewInv   = mat4(eye.pos, target.pos, vec3(0, -1, 0));
             } else
-                updateFirstPerson();
+                updateVRPointOfView();
         } else {
             if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
                 lookAngle = vec3(0.0f);
@@ -485,13 +495,13 @@ struct Camera : ICamera {
                 owner->lookAt(NULL);
             }
 
-            if (!firstPerson && (mode == MODE_FOLLOW || mode == MODE_COMBAT)) {
+            if (pointOfView == POV_3RD_PERSON_ORIGINAL && (mode == MODE_FOLLOW || mode == MODE_COMBAT)) {
                 targetAngle += angle;
             }
 
             bool isStatic = (mode == MODE_STATIC || mode == MODE_HEAVY) && viewTarget;
 
-            if (!firstPerson || isStatic) {
+            if (pointOfView == POV_3RD_PERSON_ORIGINAL || isStatic) {
                 TR::Location to;
 
                 target.box  = TR::NO_BOX;
@@ -533,7 +543,7 @@ struct Camera : ICamera {
 
                 mViewInv = mat4(eye.pos, target.pos, vec3(0, -1, 0));
             } else
-                updateFirstPerson();
+                updateVRPointOfView();
         }
 
         level->getSector(eye.room, eye.pos);
@@ -630,7 +640,7 @@ struct Camera : ICamera {
         }
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
-            updateListener(mViewInv * Input::hmd.body);
+            updateListener(mViewInv * Input::hmd.head);
         else
             updateListener(mViewInv);
     }
@@ -679,7 +689,7 @@ struct Camera : ICamera {
 
         // update room for eye (with HMD offset)
         if (Core::settings.detail.isStereo())
-            level->getSector(eye.room, Core::viewPos.xyz(), firstPerson && mode != MODE_CUTSCENE);
+            level->getSector(eye.room, Core::viewPos.xyz(), (pointOfView == ICamera::POV_1ST_PERSON) && mode != MODE_CUTSCENE);
 
         frustum->pos = Core::viewPos.xyz();
         frustum->calcPlanes(Core::mViewProj);
@@ -704,14 +714,14 @@ struct Camera : ICamera {
         Core::mProj.e23 = c.w;
     }
 
-    void changeView(bool firstPerson) {
-        this->firstPerson = firstPerson;
+    void changeView(PointOfView pov) {
+        this->pointOfView = pov;
 
-        if (firstPerson)
+        if (pov == POV_1ST_PERSON)
             smooth = false;
 
-        fov   = firstPerson ? 130.0f : 65.0f;
-        znear = firstPerson ? 16.0f : 32.0f;
+        fov   = pov == POV_1ST_PERSON ? 90.0f : 65.0f;
+        znear = pov == POV_1ST_PERSON ? 16.0f : 32.0f;
         zfar  = 45.0f * 1024.0f;
 
         #ifdef _OS_PSP

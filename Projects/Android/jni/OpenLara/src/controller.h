@@ -29,7 +29,16 @@ struct ICamera {
     vec4         *reflectPlane;
     vec3         angle;
     float        shake;
-    bool         firstPerson;
+
+
+    enum PointOfView {
+        POV_3RD_PERSON_ORIGINAL,
+        POV_1ST_PERSON,
+        POV_3RD_PERSON_VR_1, // Close behind Lara
+        POV_3RD_PERSON_VR_2, // Further away behind Lara
+        POV_COUNT
+    } pointOfView;
+
     bool         centerView;
     TR::Location eye, target;
 

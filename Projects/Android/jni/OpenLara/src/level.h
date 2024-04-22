@@ -2525,7 +2525,7 @@ struct Level : IGame {
 
             //In first person always draw portal adjacent rooms even if they are behind us as sometimes entities (doors) project
              //into the current room from a portal room behind us
-            if ((camera->firstPerson && from == TR::NO_ROOM) ||
+            if (((camera->pointOfView != ICamera::POV_3RD_PERSON_ORIGINAL) && from == TR::NO_ROOM) ||
                 (from != room.portals[i].roomIndex && checkPortal(room, p, viewPort, clipPort)))
             {
                 getVisibleRooms(roomsList, roomsCount, to, p.roomIndex, clipPort, water, count + 1);
@@ -3292,36 +3292,8 @@ struct Level : IGame {
         }
 
         if (Core::eye == 0.0f && Core::settings.detail.isStereo()) {
-            Lara *lara = (Lara*)getLara(0);
-
-            if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
-                if (lara && lara->camera && !lara->camera->firstPerson) {
-                    //lara->camera->changeView(true);
-                }
-            }
-
             renderEye(-1, showUI, invBG);
             renderEye(+1, showUI, invBG);
-
-            /*
-        #ifdef _OS_WIN
-            uint8 stereo = Core::settings.detail.stereo;
-            Core::settings.detail.stereo = Core::Settings::STEREO_OFF;
-
-            if (lara) {
-                float dt = Core::deltaTime;
-                Core::deltaTime = 1.0f;
-//                lara->camera->spectatorVR = true;
-                lara->camera->update();
-                Core::deltaTime = dt;
-            }
-            renderEye(0, showUI, invBG);
-            Core::settings.detail.stereo = stereo;
-            if (lara) {
-                lara->camera->spectatorVR = false;
-            }
-        #endif
-        */
         }  else {
             renderEye(int(Core::eye), showUI, invBG);
         }

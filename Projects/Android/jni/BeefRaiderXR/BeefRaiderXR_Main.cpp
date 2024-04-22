@@ -822,6 +822,8 @@ void VR_FrameSetup()
         forceUpdatePose = true;
     }
 
+    ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
+
     //6DOF calculation
     Lara *lara = nullptr;
     if (!inventory->isActive() &&
@@ -830,10 +832,13 @@ void VR_FrameSetup()
         static vec3 prevPos;
         lara = (Lara *) inventory->game->getLara();
 
+        pov = lara->camera->pointOfView;
+
         //Reset here, if we don't then it can break things otherwise
         lara->velocity_6dof = vec2(0.f);
 
-        if (lara->camera->firstPerson)
+        //6DoF only in 1st person
+        if (lara->camera->pointOfView == ICamera::POV_1ST_PERSON)
         {
             //Bit of a hack, but if Lara uses an item (not a med kit), don't re-enable 6dof until she returns to a valid state
             static bool usedItem = false;
@@ -867,6 +872,15 @@ void VR_FrameSetup()
     }
 
     Input::hmd.head = head;
+    if (pov <= ICamera::POV_1ST_PERSON)
+    {
+        Input::hmd.body.setRot(Input::hmd.head.getRot());
+    }
+    else
+    {
+        Input::hmd.body.setRot(snapTurnMat.getRot());
+    }
+
     if (Input::hmd.zero.x == INF || forceUpdatePose)
     {
         Input::hmd.zero = vrPosition;
@@ -875,7 +889,6 @@ void VR_FrameSetup()
 
     vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
 
-    Input::hmd.body = head; // direction body is facing
     vec3 zero = Input::hmd.zero;
     zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
     Input::hmd.head.setPos(vrPosition);
@@ -1136,7 +1149,7 @@ void VR_HandleControllerInput() {
         lara = (Lara*)inventory->game->getLara();
         laraState = lara->state;
 
-        if (lara->camera->firstPerson)
+        if (lara->camera->pointOfView != ICamera::POV_3RD_PERSON_ORIGINAL)
         {
             static bool reversed = false;
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)
@@ -1235,8 +1248,10 @@ void VR_HandleControllerInput() {
                          rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
     }
 
-    static bool hoppingBack = false;
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+    //Remove this hoppping back for now
+#if 0
+    static bool hoppingBack = false;
     //Allow Lara to hop back if walking is pressed and she's currently stood still
     if (hoppingBack || 
         ((laraState == Lara::STATE_STOP ||
@@ -1248,7 +1263,9 @@ void VR_HandleControllerInput() {
         walkingEnabled = false;
         hoppingBack = joy.length() > 0.001f;
     }
-    else if (laraState == Lara::STATE_SWIM ||
+    else 
+#endif  
+    if (laraState == Lara::STATE_SWIM ||
         laraState == Lara::STATE_TREAD ||
         laraState == Lara::STATE_GLIDE)
     {
@@ -1438,43 +1455,42 @@ void VR_HandleControllerInput() {
         }
     }
 
+    if (lara && !(leftTrackedRemoteState_new.Touches & xrButton_ThumbRest))
+    {
+        vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
+        int quadrant = rightJoy.quadrant();
+        static bool allowTogglePerspective = false;
+        if (!allowTogglePerspective)
+        {
+            if (rightJoy.length() < 0.2)
+            {
+                allowTogglePerspective = true;
+            }
+        }
+        else
+        {
+            if (rightJoy.length() > 0.2)
+            {
+                if (quadrant == 2)
+                {
+                    int perspective = lara->camera->pointOfView;
+                    if (++perspective == ICamera::POV_COUNT)
+                    {
+                        perspective = ICamera::POV_3RD_PERSON_ORIGINAL;
+                    }
+                    lara->camera->changeView((ICamera::PointOfView)perspective);
+                }
+
+                allowTogglePerspective = false;
+            }
+        }
+    }
+
     if (cheatsEnabled)
     {
         static int speed = 0;
         Input::setDown(ikT, speed & 1);
         Input::setDown(ikR, speed & 2);
-
-        if (lara && (rightTrackedRemoteState_new.Touches & xrButton_ThumbRest))
-        {
-            vec2 leftJoy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-            int quadrant = leftJoy.quadrant();
-            static bool allowToggleCheat = false;
-            if (!allowToggleCheat)
-            {
-                if (leftJoy.length() < 0.2)
-                {
-                    allowToggleCheat = true;
-                }
-            }
-            else
-            {
-                if (leftJoy.length() > 0.2)
-                {
-                    if (quadrant == 0)
-                    {
-                        lara->camera->changeView(!lara->camera->firstPerson);
-                    }
-                    else if (quadrant == 2)
-                    {
-                        Game::level->killAllEnemies();
-
-                    }
-
-                    allowToggleCheat = false;
-                }
-            }
-            
-        }
 
         if (leftTrackedRemoteState_new.Touches & xrButton_ThumbRest)
         {
