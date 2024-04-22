@@ -393,7 +393,7 @@ struct Lara : Character {
 
         void integrate() {
             float TIMESTEP = Core::deltaTime;
-            float ACCEL    = 16.0f * GRAVITY * 30.0f * TIMESTEP * TIMESTEP;
+            float ACCEL    = 16.0f * GRAVITY * 30.0f * TIMESTEP * TIMESTEP * 4.f;
             float DAMPING  = 1.5f;
 
             if (lara->stand == STAND_UNDERWATER) {
@@ -427,7 +427,7 @@ struct Lara : Character {
                 if (joints[j].pos.y > info.floor)
                     joints[j].pos.y = info.floor;
 
-            #define BRAID_RADIUS 0.0f
+            #define BRAID_RADIUS 0.1f
 
             lara->updateJoints();
 
@@ -561,7 +561,7 @@ struct Lara : Character {
             vec3 offset(0.0f);
             switch (level->version & TR::VER_VERSION) {
                 case TR::VER_TR1 :
-                    //braid[0] = new Braid(this, vec3(-4.0f, 24.0f, -48.0f)); // it's just ugly :)
+                    braid[0] = new Braid(this, vec3(-2.0f, 52.0f, -48.0f));
                     break;
                 case TR::VER_TR2 :
                 case TR::VER_TR3 :
@@ -804,7 +804,7 @@ struct Lara : Character {
         updateZone();
         updateLights(false);
 
-        camera->changeView(camera->firstPerson);
+        camera->changeView(ICamera::POV_1ST_PERSON);
     }
 
     void wpnSet(TR::Entity::Type wType) {
@@ -961,7 +961,7 @@ struct Lara : Character {
     }
 
     bool canIKLegs() {
-        if (level->isCutsceneLevel() || !camera->firstPerson)
+        if (level->isCutsceneLevel() || camera->pointOfView != ICamera::POV_1ST_PERSON)
         {
             return false;
         }
@@ -987,7 +987,7 @@ struct Lara : Character {
     }
 
     bool canIKArms() {
-        if (level->isCutsceneLevel() || !camera->firstPerson)
+        if (level->isCutsceneLevel() || camera->pointOfView != ICamera::POV_1ST_PERSON)
         {
             return false;
         }
@@ -3386,15 +3386,26 @@ struct Lara : Character {
         }
 
     // VR control
-        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR && camera->firstPerson && canFreeRotate()) {
+        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR && 
+            (camera->pointOfView != ICamera::POV_3RD_PERSON_ORIGINAL) && 
+            canFreeRotate()) {
 
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
             if (!(input & JUMP) && !inventory->isActive()) {
                 input &= ~(LEFT | RIGHT);
             }
 
-            vec3 ang = getAngleAbs(Input::hmd.head.dir().xyz());
-            angle.y = ang.y;
+            vec3 ang;
+            if (camera->pointOfView == ICamera::POV_1ST_PERSON)
+            {
+                ang = getAngleAbs(Input::hmd.head.dir().xyz());
+                angle.y = ang.y;
+            }
+            else
+            {
+                ang = getAngleAbs(Input::hmd.body.dir().xyz());
+                angle.y = ang.y;
+            }
 
             if (stand == STAND_UNDERWATER) {
                 input &= ~(FORTH | BACK);
@@ -3494,8 +3505,8 @@ struct Lara : Character {
     }
 
     virtual void update() {
-        if (Input::state[camera->cameraIndex][cLook] && Input::lastState[camera->cameraIndex] == cAction)
-            camera->changeView(!camera->firstPerson);
+//        if (Input::state[camera->cameraIndex][cLook] && Input::lastState[camera->cameraIndex] == cAction)
+//            camera->changeView(!camera->firstPerson);
 
         if (level->isCutsceneLevel()) {
             updateAnimation(true);
@@ -3759,7 +3770,7 @@ struct Lara : Character {
         if (stand == STAND_UNDERWATER)
             vTilt *= 2.0f;
         vTilt *= rotFactor.y;
-        bool VR = (Core::settings.detail.stereo == Core::Settings::STEREO_VR) && camera->firstPerson;
+        bool VR = (Core::settings.detail.stereo == Core::Settings::STEREO_VR) && (camera->pointOfView == ICamera::POV_1ST_PERSON);
         updateTilt((input & WALK) == 0 && (state == STATE_RUN || (state == STATE_STOP && animation.index == ANIM_LANDING_HIGH) || stand == STAND_UNDERWATER) && !VR, vTilt.x, vTilt.y);
 
         collisionOffset = vec3(0.0f);
@@ -4088,7 +4099,7 @@ struct Lara : Character {
 //        if (state == STATE_BACK_JUMP || state == STATE_LEFT_JUMP || state == STATE_RIGHT_JUMP || state == STATE_HANDSTAND || state == STATE_SWAN_DIVE)
 //            return false;
 
-        if (Core::pass != Core::passShadow && camera->firstPerson && camera->viewIndex == -1 && game->getCamera() == camera)
+        if (Core::pass != Core::passShadow && (camera->pointOfView == ICamera::POV_1ST_PERSON) && camera->viewIndex == -1 && game->getCamera() == camera)
             return true;
 
         return false;
