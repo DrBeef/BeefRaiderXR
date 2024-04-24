@@ -185,10 +185,10 @@ struct Camera : ICamera {
         int povOffset = 0;
         if (mode != MODE_CUTSCENE && pointOfView >= POV_3RD_PERSON_VR_1)
         {
-            povOffset = 512 * pointOfView;
+            povOffset = 256 * pointOfView;
             
             fpHead.pos = owner->getPos();
-            fpHead.pos.y -= owner->getHeight();
+            fpHead.pos.y -= 700;
             fpHead.pos -= Input::hmd.body.getPos() * ONE_METER;
             fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
 

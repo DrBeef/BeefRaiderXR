@@ -140,7 +140,9 @@ void  osJoyVibrate(int index, float L, float R)
 void osBeforeLoadNextLevel()
 {
     //Level reset
+    Input::hmd.nextrot = 0.f;
     Input::hmd.extrarot = 0.f;
+    Input::hmd.extrarot2 = 0.f;
 }
 
 #ifdef ANDROID
@@ -737,7 +739,9 @@ void VR_Init()
 #endif
 
 	//Initialise all our variables
+	Input::hmd.nextrot = 0.0f;
 	Input::hmd.extrarot = 0.0f;
+	Input::hmd.extrarot2 = 0.0f;
 
 	//init randomiser
 	srand(time(NULL));
@@ -811,6 +815,10 @@ void VR_FrameSetup()
                        gAppState.xfStageFromHead.orientation.z,
                        gAppState.xfStageFromHead.orientation.w);
 
+    //Apply any rotation changes from previous frame
+    Input::hmd.extrarot2 -= (Input::hmd.nextrot - Input::hmd.extrarot);
+    Input::hmd.extrarot = Input::hmd.nextrot;
+
     mat4 snapTurnMat;
     snapTurnMat.identity();
     snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
@@ -877,10 +885,14 @@ void VR_FrameSetup()
     if (pov <= ICamera::POV_1ST_PERSON)
     {
         Input::hmd.body.setRot(Input::hmd.head.getRot());
+        Input::hmd.extrarot2 = (Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
     }
     else
     {
-        Input::hmd.body.setRot(snapTurnMat.getRot());
+        mat4 m;
+        m.identity();
+        m.rotateY(-DEG2RAD * Input::hmd.extrarot2);
+        Input::hmd.body.setRot(m.getRot());
     }
 
     if (Input::hmd.zero.x == INF || forceUpdatePose)
@@ -1160,7 +1172,7 @@ void VR_HandleControllerInput() {
                 if (!reversed &&
                     lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
                 {
-                    Input::hmd.extrarot += 180.f;
+                    Input::hmd.nextrot += 180.f;
                     reversed = true;
                 }
             }
@@ -1190,11 +1202,11 @@ void VR_HandleControllerInput() {
                 {
                     if (increaseSnap)
                     {
-                        Input::hmd.extrarot -= 45.f;
+                        Input::hmd.nextrot -= 45.f;
                         increaseSnap = false;
-                        if (Input::hmd.extrarot < -180.0f)
+                        if (Input::hmd.nextrot < -180.0f)
                         {
-                            Input::hmd.extrarot += 360.f;
+                            Input::hmd.nextrot += 360.f;
                         }
                     }
                 }
@@ -1211,12 +1223,12 @@ void VR_HandleControllerInput() {
                 {
                     if (decreaseSnap)
                     {
-                        Input::hmd.extrarot += 45.f;
+                        Input::hmd.nextrot += 45.f;
                         decreaseSnap = false;
 
-                        if (Input::hmd.extrarot > 180.0f)
+                        if (Input::hmd.nextrot > 180.0f)
                         {
-                            Input::hmd.extrarot -= 360.f;
+                            Input::hmd.nextrot -= 360.f;
                         }
                     }
                 }
@@ -1228,11 +1240,11 @@ void VR_HandleControllerInput() {
 
             if (!usingSnapTurn && fabs(joystick.x) > 0.1f) //smooth turn
             {
-                Input::hmd.extrarot -= (Core::settings.detail.turnmode *
+                Input::hmd.nextrot -= (Core::settings.detail.turnmode *
                         joystick.x);
-                if (Input::hmd.extrarot > 180.0f)
+                if (Input::hmd.nextrot > 180.0f)
                 {
-                    Input::hmd.extrarot -= 360.f;
+                    Input::hmd.nextrot -= 360.f;
                 }
             }
         }
@@ -1479,7 +1491,9 @@ void VR_HandleControllerInput() {
                     int perspective = lara->camera->pointOfView;
                     if (++perspective == ICamera::POV_COUNT)
                     {
-                        perspective = ICamera::POV_3RD_PERSON_ORIGINAL;
+                        //Go back to 1st person, don't include the original game's 3rd person camera
+                        //as it is a nightmare in VR
+                        perspective = ICamera::POV_1ST_PERSON;
                     }
                     lara->camera->changeView((ICamera::PointOfView)perspective);
                 }

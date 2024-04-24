@@ -36,6 +36,7 @@ struct ICamera {
         POV_1ST_PERSON,
         POV_3RD_PERSON_VR_1, // Close behind Lara
         POV_3RD_PERSON_VR_2, // Further away behind Lara
+        POV_3RD_PERSON_VR_3, // Further away behind Lara
         POV_COUNT
     } pointOfView;
 
@@ -1363,15 +1364,15 @@ struct Controller {
             if (e.type == TR::Entity::LARA)
             {
                 //Use body direction for the animated torso
+                vec3 ang;
                 if (getCameraPOV() == ICamera::POV_1ST_PERSON)
                 {
-                    vec3 ang = getAngleAbs(Input::hmd.body.dir().xyz());
-                    if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+                    ang = getAngleAbs(Input::hmd.body.dir().xyz());
                 }
                 else {
-                    vec3 ang = getAngleAbs(Input::hmd.head.dir().xyz());
-                    if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+                    ang = getAngleAbs(Input::hmd.head.dir().xyz());
                 }
+                if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
             } else {
                 if (angle.y != 0.0f) matrix.rotateY(angle.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
             }

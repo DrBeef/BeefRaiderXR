@@ -39,7 +39,9 @@ namespace Input {
     struct HMD {
         mat4 head; // heading
         mat4 body; // body facing direction (set from HMD
+        float nextrot; // additional yaw angle from snap/smooth turn to be added next frame
         float extrarot; // additional yaw angle from snap/smooth turn
+        float extrarot2; // yaw angle from snap/smooth turn used for 3rd person
         mat4 eye[2];
         mat4 proj[2];
         mat4 controllers[2];
