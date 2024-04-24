@@ -842,7 +842,7 @@ void VR_FrameSetup()
         {
             //Bit of a hack, but if Lara uses an item (not a med kit), don't re-enable 6dof until she returns to a valid state
             static bool usedItem = false;
-            if (lara->usedItem != TR::Entity::NONE)
+            if (lara->usedItem > TR::Entity::NONE)
             {
                 usedItem = lara->usedItem != TR::Entity::INV_MEDIKIT_SMALL &&
                     lara->usedItem != TR::Entity::INV_MEDIKIT_BIG;
@@ -871,6 +871,8 @@ void VR_FrameSetup()
         prevPos = vrPosition;
     }
 
+    vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+
     Input::hmd.head = head;
     if (pov <= ICamera::POV_1ST_PERSON)
     {
@@ -887,12 +889,11 @@ void VR_FrameSetup()
         forceUpdatePose = false;
     }
 
-    vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
-
     vec3 zero = Input::hmd.zero;
     zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
     Input::hmd.head.setPos(vrPosition);
     Input::hmd.body.setPos(vrPosition - zero);
+    Input::hmd.body.e03 *= -1.0f; // have to do this to correct 3rd person X position
 
     //Left eye
     mat4 vL = head;
@@ -1143,13 +1144,15 @@ void VR_HandleControllerInput() {
 
     Lara *lara = nullptr;
     int laraState = -1;
+    ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
     if (!inventory->isActive() &&
         inventory->game->getLara())
     {
         lara = (Lara*)inventory->game->getLara();
         laraState = lara->state;
+        pov = lara->camera->pointOfView;
 
-        if (lara->camera->pointOfView != ICamera::POV_3RD_PERSON_ORIGINAL)
+        if (pov == ICamera::POV_1ST_PERSON)
         {
             static bool reversed = false;
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)

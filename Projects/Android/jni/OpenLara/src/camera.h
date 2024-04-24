@@ -183,24 +183,34 @@ struct Camera : ICamera {
         Basis &joint = owner->getJoint(owner->jointHead);
 
         int povOffset = 0;
-        if (pointOfView >= POV_3RD_PERSON_VR_1)
+        if (mode != MODE_CUTSCENE && pointOfView >= POV_3RD_PERSON_VR_1)
         {
             povOffset = 512 * pointOfView;
-        }
+            
+            fpHead.pos = owner->getPos();
+            fpHead.pos.y -= owner->getHeight();
+            fpHead.pos -= Input::hmd.body.getPos() * ONE_METER;
+            fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
 
-        if (mode != MODE_CUTSCENE && !owner->useHeadAnimation()) {
-            targetAngle.x += PI;
-            targetAngle.z = -targetAngle.z;
-
-            vec3 pos = joint.pos - joint.rot * vec3(0, 48, -40 + povOffset);
-            quat rot = rotYXZ(targetAngle);
-
-            fpHead.pos = pos;
-            fpHead.rot = fpHead.rot.lerp(rot, smooth ? Core::deltaTime * 10.0f : 1.0f);
-        } else {
-            fpHead = joint;
             fpHead.rot = fpHead.rot * quat(vec3(1, 0, 0), PI);
-            fpHead.pos -= joint.rot * vec3(0, 48, -40 + povOffset);
+        }
+        else
+        {
+            if (mode != MODE_CUTSCENE && !owner->useHeadAnimation()) {
+                targetAngle.x += PI;
+                targetAngle.z = -targetAngle.z;
+
+                vec3 pos = joint.pos - joint.rot * vec3(0, 48, -40 + povOffset);
+                quat rot = rotYXZ(targetAngle);
+
+                fpHead.pos = pos;
+                fpHead.rot = fpHead.rot.lerp(rot, smooth ? Core::deltaTime * 10.0f : 1.0f);
+            }
+            else {
+                fpHead = joint;
+                fpHead.rot = fpHead.rot * quat(vec3(1, 0, 0), PI);
+                fpHead.pos -= joint.rot * vec3(0, 48, -40);
+            }
         }
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {

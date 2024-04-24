@@ -1345,6 +1345,12 @@ struct Controller {
         }
     }
 
+    //This is only overridden for the use by Lara
+    virtual ICamera::PointOfView getCameraPOV()
+    {
+        return ICamera::POV_1ST_PERSON;
+    }
+
     mat4 getMatrix() {
         const TR::Entity &e = getEntity();
 
@@ -1357,8 +1363,15 @@ struct Controller {
             if (e.type == TR::Entity::LARA)
             {
                 //Use body direction for the animated torso
-                vec3 ang = getAngleAbs(Input::hmd.body.dir().xyz());
-                if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+                if (getCameraPOV() == ICamera::POV_1ST_PERSON)
+                {
+                    vec3 ang = getAngleAbs(Input::hmd.body.dir().xyz());
+                    if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+                }
+                else {
+                    vec3 ang = getAngleAbs(Input::hmd.head.dir().xyz());
+                    if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+                }
             } else {
                 if (angle.y != 0.0f) matrix.rotateY(angle.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
             }

@@ -561,7 +561,7 @@ struct Lara : Character {
             vec3 offset(0.0f);
             switch (level->version & TR::VER_VERSION) {
                 case TR::VER_TR1 :
-                    braid[0] = new Braid(this, vec3(-2.0f, 52.0f, -48.0f));
+                    braid[0] = new Braid(this, vec3(-2.0f, 52.0f, -52.0f));
                     break;
                 case TR::VER_TR2 :
                 case TR::VER_TR3 :
@@ -805,6 +805,11 @@ struct Lara : Character {
         updateLights(false);
 
         camera->changeView(ICamera::POV_1ST_PERSON);
+    }
+
+    ICamera::PointOfView getCameraPOV()
+    {
+        return camera->pointOfView;
     }
 
     void wpnSet(TR::Entity::Type wType) {
@@ -3387,7 +3392,7 @@ struct Lara : Character {
 
     // VR control
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR && 
-            (camera->pointOfView != ICamera::POV_3RD_PERSON_ORIGINAL) && 
+            //(camera->pointOfView != ICamera::POV_3RD_PERSON_ORIGINAL) && 
             canFreeRotate()) {
 
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
@@ -3396,16 +3401,8 @@ struct Lara : Character {
             }
 
             vec3 ang;
-            if (camera->pointOfView == ICamera::POV_1ST_PERSON)
-            {
-                ang = getAngleAbs(Input::hmd.head.dir().xyz());
-                angle.y = ang.y;
-            }
-            else
-            {
-                ang = getAngleAbs(Input::hmd.body.dir().xyz());
-                angle.y = ang.y;
-            }
+            ang = getAngleAbs(Input::hmd.head.dir().xyz());
+            angle.y = ang.y;
 
             if (stand == STAND_UNDERWATER) {
                 input &= ~(FORTH | BACK);
