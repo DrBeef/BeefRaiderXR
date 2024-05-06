@@ -482,7 +482,7 @@ struct Lara : Character {
             for (int i = 0; i < jointsCount; i++) // solve connections (springs)
                 solve();
 
-            vec3 headDir = getBasis().rot * vec3(0.0f, 0.0f, -1.0f);
+            vec3 headDir = getBasis().rot * vec3(0.0f, 0.0f, 1.0f);
 
             for (int i = 0; i < jointsCount - 1; i++) {
                 vec3 d = (joints[i + 1].pos - joints[i].pos).normal();
@@ -561,7 +561,7 @@ struct Lara : Character {
             vec3 offset(0.0f);
             switch (level->version & TR::VER_VERSION) {
                 case TR::VER_TR1 :
-                    braid[0] = new Braid(this, vec3(-2.0f, 52.0f, -52.0f));
+                    braid[0] = new Braid(this, vec3(-2.0f, 52.0f, -42.0f));
                     break;
                 case TR::VER_TR2 :
                 case TR::VER_TR3 :

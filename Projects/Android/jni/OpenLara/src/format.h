@@ -4873,8 +4873,7 @@ namespace TR {
                 }
             }
 
-            //inject the braid if we have a lara in this level data!
-            if (extra.laraSpec != -1)
+            //inject the braid just in case we have a lara in this level data!
             {
                 //We can do this as we always allocated an extra model in memory for this just in case
                 extra.braid = modelsCount++;
@@ -4922,7 +4921,7 @@ namespace TR {
                 meshDataSize += (BRAID_SEGMENTS * BRAID_SEGMENT_DATA_SIZE) / 2;
 
                 for (int j = 0; j < model.mCount; j++) {
-                    initMesh(model.mStart + j, model.type);
+                    initMesh(model.mStart + j, model.type, true);
                 }
 
                 //remapMeshOffsetsToIndices
@@ -5590,11 +5589,14 @@ namespace TR {
             r.dynLightsCount = 0;
         }
 
-        void initMesh(int mIndex, Entity::Type type = Entity::NONE) {
+        void initMesh(int mIndex, Entity::Type type = Entity::NONE, bool force = false) {
             int offset = meshOffsets[mIndex];
-            for (int i = 0; i < meshesCount; i++) {
-                if (meshes[i].offset == offset) {
-                    return;
+            if (!force)
+            {
+                for (int i = 0; i < meshesCount; i++) {
+                    if (meshes[i].offset == offset) {
+                        return;
+                    }
                 }
             }
 

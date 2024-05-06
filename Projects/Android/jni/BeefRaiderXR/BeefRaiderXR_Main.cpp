@@ -879,22 +879,6 @@ void VR_FrameSetup()
         prevPos = vrPosition;
     }
 
-    vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
-
-    Input::hmd.head = head;
-    if (pov <= ICamera::POV_1ST_PERSON)
-    {
-        Input::hmd.body.setRot(Input::hmd.head.getRot());
-        Input::hmd.extrarot2 = (Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
-    }
-    else
-    {
-        mat4 m;
-        m.identity();
-        m.rotateY(-DEG2RAD * Input::hmd.extrarot2);
-        Input::hmd.body.setRot(m.getRot());
-    }
-
     if (Input::hmd.zero.x == INF || forceUpdatePose)
     {
         Input::hmd.zero = vrPosition;
@@ -902,7 +886,26 @@ void VR_FrameSetup()
     }
 
     vec3 zero = Input::hmd.zero;
-    zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
+
+
+    Input::hmd.head = head;
+    if (pov <= ICamera::POV_1ST_PERSON)
+    {
+        Input::hmd.body.setRot(Input::hmd.head.getRot());
+        Input::hmd.extrarot2 = Input::hmd.extrarot - (Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+        vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+        zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
+    }
+    else
+    {
+        mat4 m;
+        m.identity();
+        m.rotateY(-DEG2RAD * Input::hmd.extrarot2);
+        Input::hmd.body.setRot(m.getRot());
+        vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot2);
+        zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot2);
+    }
+
     Input::hmd.head.setPos(vrPosition);
     Input::hmd.body.setPos(vrPosition - zero);
     Input::hmd.body.e03 *= -1.0f; // have to do this to correct 3rd person X position
@@ -955,14 +958,15 @@ void * AppThreadFunction(void * parm ) {
     TBXR_WaitForSessionActive();
 
     std::string levelName;
+    std::string brxrDir = (char*)getenv("BRXR_DIR");
     if (isDemo)
     {
-        chdir("/sdcard/BeefRaiderXR/DATA");
+        chdir((brxrDir + "/DATA").c_str());
         levelName = "LEVEL2.PHD";
     }
     else
     {
-        chdir("/sdcard/BeefRaiderXR");
+        chdir(brxrDir.c_str());
     }
 
     osStartTime = Core::getTime();
