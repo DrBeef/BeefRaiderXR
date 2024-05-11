@@ -143,6 +143,7 @@ void osBeforeLoadNextLevel()
     Input::hmd.nextrot = 0.f;
     Input::hmd.extrarot = 0.f;
     Input::hmd.extrarot2 = 0.f;
+    Input::hmd.extraworldscaler = 1.f;
 }
 
 #ifdef ANDROID
@@ -742,6 +743,7 @@ void VR_Init()
 	Input::hmd.nextrot = 0.0f;
 	Input::hmd.extrarot = 0.0f;
 	Input::hmd.extrarot2 = 0.0f;
+	Input::hmd.extraworldscaler = 1.0f;
 
 	//init randomiser
 	srand(time(NULL));
@@ -912,11 +914,11 @@ void VR_FrameSetup()
 
     //Left eye
     mat4 vL = head;
-    vL.setPos((head.right().xyz() * (-0.065f / 2.f)) * ONE_METER);
+    vL.setPos((head.right().xyz() * (-0.065f / 2.f)) * ONE_METER * Input::hmd.extraworldscaler);
 
     //Right eye
     mat4 vR = head;
-    vR.setPos((head.right().xyz() * (0.065f / 2.f)) * ONE_METER);
+    vR.setPos((head.right().xyz() * (0.065f / 2.f)) * ONE_METER * Input::hmd.extraworldscaler);
 
     Input::hmd.setView(pL, pR, vL, vR);
 }
@@ -1459,12 +1461,15 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if ((!inventory->isActive()&& rightTrackedRemoteState_new.GripTrigger > 0.4f &&
-              rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
-             ((inventory->isActive() || inventory->phaseRing > 0.f) && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
-              rightTrackedRemoteState_old.GripTrigger > 0.4f))
+    if (!Game::level->level.isTitle())
     {
-        inventory->toggle(0, Inventory::PAGE_INVENTORY);
+        if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
+            rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
+            ((inventory->isActive() || inventory->phaseRing > 0.f) && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
+                rightTrackedRemoteState_old.GripTrigger > 0.4f))
+        {
+            inventory->toggle(0, Inventory::PAGE_INVENTORY);
+        }
     }
 
     static bool allowSaveLoad = false;
@@ -1530,6 +1535,8 @@ void VR_HandleControllerInput() {
             }
         }
     }
+
+    Input::hmd.extraworldscaler = (pov == ICamera::POV_3RD_PERSON_VR_3 && !inventory->active) ? 12.0f : 1.0f;
 
     if (cheatsEnabled)
     {

@@ -36,6 +36,7 @@ struct ICamera {
         POV_1ST_PERSON,
         POV_3RD_PERSON_VR_1, // Close behind Lara
         POV_3RD_PERSON_VR_2, // Further away behind Lara
+        POV_3RD_PERSON_VR_3, // Miniature mode
         POV_COUNT
     } pointOfView;
 

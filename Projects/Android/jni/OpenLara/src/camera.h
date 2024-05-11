@@ -185,11 +185,11 @@ struct Camera : ICamera {
         int povOffset = 0;
         if (mode != MODE_CUTSCENE && pointOfView >= POV_3RD_PERSON_VR_1)
         {
-            povOffset = 384 * pointOfView;
+            povOffset = 384 * pointOfView * (pointOfView == POV_3RD_PERSON_VR_3 ? 2.0f : 1.0f);
             
             fpHead.pos = owner->getPos();
-            fpHead.pos.y -= 700;
-            fpHead.pos -= Input::hmd.body.getPos() * ONE_METER;
+            fpHead.pos.y -= 400 + (300 * Input::hmd.extraworldscaler);
+            fpHead.pos -= Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler);
             fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
 
             fpHead.rot = fpHead.rot * quat(vec3(1, 0, 0), PI);
@@ -231,8 +231,11 @@ struct Camera : ICamera {
         from.room = getRoomIndex();
         from.pos = opos;
         to.pos = fpHead.pos;
-        owner->trace(from, to);
-        
+
+        if (pointOfView == POV_3RD_PERSON_VR_1 || pointOfView == POV_3RD_PERSON_VR_1)
+        {
+            owner->trace(from, to);
+        }        
 
         mViewInv.identity();
         mViewInv.setRot(fpHead.rot);
