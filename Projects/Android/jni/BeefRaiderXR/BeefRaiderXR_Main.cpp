@@ -816,7 +816,7 @@ void VR_FrameSetup()
                        gAppState.xfStageFromHead.orientation.w);
 
     //Apply any rotation changes from previous frame
-    Input::hmd.extrarot2 -= (Input::hmd.nextrot - Input::hmd.extrarot);
+    Input::hmd.extrarot2 += (Input::hmd.nextrot - Input::hmd.extrarot);
     Input::hmd.extrarot = Input::hmd.nextrot;
 
     mat4 snapTurnMat;
@@ -889,10 +889,10 @@ void VR_FrameSetup()
 
 
     Input::hmd.head = head;
-    if (pov <= ICamera::POV_1ST_PERSON)
+    if (pov <= ICamera::POV_1ST_PERSON || forceUpdatePose)
     {
         Input::hmd.body.setRot(Input::hmd.head.getRot());
-        Input::hmd.extrarot2 = Input::hmd.extrarot - (Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+        Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
         vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
         zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
     }
@@ -900,10 +900,10 @@ void VR_FrameSetup()
     {
         mat4 m;
         m.identity();
-        m.rotateY(-DEG2RAD * Input::hmd.extrarot2);
+        m.rotateY(DEG2RAD * Input::hmd.extrarot2);
         Input::hmd.body.setRot(m.getRot());
-        vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot2);
-        zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot2);
+        vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+        zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
     }
 
     Input::hmd.head.setPos(vrPosition);
@@ -1158,6 +1158,30 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 void VR_HandleControllerInput() {
 	TBXR_UpdateControllers();
 
+
+    vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
+        leftRemoteTracking_new.GripPose.position.y,
+        leftRemoteTracking_new.GripPose.position.z);
+
+    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
+        leftRemoteTracking_new.GripPose.orientation.y,
+        leftRemoteTracking_new.GripPose.orientation.z,
+        leftRemoteTracking_new.GripPose.orientation.w);
+
+    vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
+        rightRemoteTracking_new.GripPose.position.y,
+        rightRemoteTracking_new.GripPose.position.z);
+
+    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
+        rightRemoteTracking_new.GripPose.orientation.y,
+        rightRemoteTracking_new.GripPose.orientation.z,
+        rightRemoteTracking_new.GripPose.orientation.w);
+
+    mat4 snapTurnMat;
+    snapTurnMat.identity();
+    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
+    vec3 zero = Input::hmd.head.getPos();
+
     Lara *lara = nullptr;
     int laraState = -1;
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
@@ -1289,7 +1313,18 @@ void VR_HandleControllerInput() {
         laraState == Lara::STATE_GLIDE)
     {
         Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
-        Input::hmd.head.setRot(Input::hmd.body.getRot());
+
+        if (pov == ICamera::POV_1ST_PERSON)
+        {
+            Input::hmd.head.setRot(Input::hmd.body.getRot());
+        }
+        else
+        {
+            mat4 m = snapTurnMat;
+            m.rotateX(-PIH / 2.0f);
+            mat4 cR = m * mat4(vrLeftControllerOrientation, vec3(0));
+            Input::hmd.head.setRot(cR.getRot());
+        }
     }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
     // is pressing the thumbstick like a modern game
@@ -1343,24 +1378,6 @@ void VR_HandleControllerInput() {
     {
         Input::hmd.head.setRot(Input::hmd.body.getRot());
     }
-
-    vec3 vrLeftControllerPosition(leftRemoteTracking_new.GripPose.position.x,
-                                  leftRemoteTracking_new.GripPose.position.y,
-                                  leftRemoteTracking_new.GripPose.position.z);
-
-    quat vrLeftControllerOrientation(leftRemoteTracking_new.GripPose.orientation.x,
-                                     leftRemoteTracking_new.GripPose.orientation.y,
-                                     leftRemoteTracking_new.GripPose.orientation.z,
-                                     leftRemoteTracking_new.GripPose.orientation.w);
-
-    vec3 vrRightControllerPosition(rightRemoteTracking_new.GripPose.position.x,
-                                   rightRemoteTracking_new.GripPose.position.y,
-                                   rightRemoteTracking_new.GripPose.position.z);
-
-    quat vrRightControllerOrientation(rightRemoteTracking_new.GripPose.orientation.x,
-                                      rightRemoteTracking_new.GripPose.orientation.y,
-                                      rightRemoteTracking_new.GripPose.orientation.z,
-                                      rightRemoteTracking_new.GripPose.orientation.w);
 
     //Inventory controls
     static bool AButtonActive = true; // This is used to suppress an A button event when you come out of the inventory so you don't immediately jump
@@ -1499,7 +1516,14 @@ void VR_HandleControllerInput() {
                         //as it is a nightmare in VR
                         perspective = ICamera::POV_1ST_PERSON;
                     }
+
                     lara->camera->changeView((ICamera::PointOfView)perspective);
+
+                    //If switching to 3rd person force reset of position
+                    if (perspective == ICamera::POV_3RD_PERSON_VR_1)
+                    {
+                        forceUpdatePose = true;
+                    }
                 }
 
                 allowTogglePerspective = false;
@@ -1581,11 +1605,6 @@ void VR_HandleControllerInput() {
             vrLeftControllerOrientation = basis.rot;
         }
     }
-
-    mat4 snapTurnMat;
-    snapTurnMat.identity();
-    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
-    vec3 zero = Input::hmd.head.getPos();
 
     mat4 cR = snapTurnMat * mat4(vrRightControllerOrientation, vec3(0));
     cR.setPos((vrRightControllerPosition - zero) * ONE_METER);
