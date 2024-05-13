@@ -156,7 +156,7 @@ namespace Game {
         }
 
         Core::settings.version = SETTINGS_READING;
-        Stream::cacheRead("settings", loadSettings, lvl);
+        Stream::cacheRead(SETTINGS_FILENAME, loadSettings, lvl);
         readSlots();
     }
 

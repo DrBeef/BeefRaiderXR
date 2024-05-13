@@ -354,6 +354,16 @@ const char *STR_RU[] = { ""
     , "Lost City Of Tinnos"
     , "Meteorite Cavern"
     , "All Hallows"
+
+
+        // VR ADDITIONS
+        , "Lara's Braid"
+        , "POV Mode"
+        , "1st Person"
+        , "1st & 3rd Person"
+        , "1st, 3rd in Cutscenes"
+        , "3rd Person Toggle"
+        , "Enable Toy Mode"
 };
 
 inline bool isCyrillic(char c) {

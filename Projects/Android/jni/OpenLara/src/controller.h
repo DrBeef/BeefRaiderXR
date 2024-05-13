@@ -30,16 +30,6 @@ struct ICamera {
     vec3         angle;
     float        shake;
 
-
-    enum PointOfView {
-        POV_3RD_PERSON_ORIGINAL,
-        POV_1ST_PERSON,
-        POV_3RD_PERSON_VR_1, // Close behind Lara
-        POV_3RD_PERSON_VR_2, // Further away behind Lara
-        POV_3RD_PERSON_VR_3, // Miniature mode
-        POV_COUNT
-    } pointOfView;
-
     bool         centerView;
     TR::Location eye, target;
 
@@ -54,6 +44,21 @@ struct ICamera {
         angle.x = x * DEG2RAD;
         angle.y = y * DEG2RAD;
     }
+
+
+    enum PointOfView {
+        POV_3RD_PERSON_ORIGINAL,
+        POV_1ST_PERSON,
+        POV_3RD_PERSON_VR_1, // Close behind Lara
+        POV_3RD_PERSON_VR_2, // Further away behind Lara
+        POV_3RD_PERSON_VR_TOY_MODE, // Miniature mode
+        POV_COUNT
+    };
+
+    virtual PointOfView getPointOfView(bool) = 0;
+
+protected: 
+    int pointOfViewIndex;
 };
 
 struct RoomDesc {

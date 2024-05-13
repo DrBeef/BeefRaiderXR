@@ -145,6 +145,15 @@ static const OptionItem optDetail[] = {
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HANDEDNESS,   SETTINGS( detail.handedness    ), STR_RIGHT_HANDED, 0, 1),
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 2),
 
+    //Braid On/Off
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_BRAID,   SETTINGS( detail.braid    ), STR_OFF, 0, 1),
+
+    //Perspective Mode
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_POV,   SETTINGS( detail.pointOfViewMode), STR_OPT_DETAIL_POV_1, 0, 3),
+
+    //Toy Mode Enabled
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TOY_MODE,   SETTINGS( detail.toyModeEnabled), STR_OFF, 0, 1),
+
     /* Removed the VR option selection since it is always VR */
 #if 0
 #if !defined(_OS_PSP) && !defined(_OS_PSV) && !defined(_OS_3DS) && !defined(_OS_GCW0)

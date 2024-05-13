@@ -401,7 +401,7 @@ struct Level : IGame {
 
         Core::setVSync(Core::settings.detail.vsync != 0);
 
-        Stream::cacheWrite("settings", (char*)&settings, sizeof(settings));
+        Stream::cacheWrite(SETTINGS_FILENAME, (char*)&settings, sizeof(settings));
 
         if (rebuildShaders) {
         #if !defined(_GAPI_D3D9) && !defined(_GAPI_D3D11) && !defined(_GAPI_GXM)
@@ -2525,7 +2525,7 @@ struct Level : IGame {
 
             //In first person always draw portal adjacent rooms even if they are behind us as sometimes entities (doors) project
              //into the current room from a portal room behind us
-            if (((camera->pointOfView != ICamera::POV_3RD_PERSON_ORIGINAL) && from == TR::NO_ROOM) ||
+            if (((camera->getPointOfView() != ICamera::POV_3RD_PERSON_ORIGINAL) && from == TR::NO_ROOM) ||
                 (from != room.portals[i].roomIndex && checkPortal(room, p, viewPort, clipPort)))
             {
                 getVisibleRooms(roomsList, roomsCount, to, p.roomIndex, clipPort, water, count + 1);

@@ -106,6 +106,8 @@ typedef unsigned long long uint64;
 #define OFFSETOF(T, E)     ((size_t)&(((T*)0)->E))
 #define TEST_BIT(arr, bit) ((arr[bit / 32] >> (bit % 32)) & 1)
 
+#define SETTINGS_FILENAME   "settings_vr"
+
 template <typename T>
 inline const T& min(const T &a, const T &b) {
     return a < b ? a : b;
@@ -1746,7 +1748,7 @@ struct Stream {
     static void cacheRead(const char *name, Callback *callback = NULL, void *userData = NULL) {
         Stream *stream = new Stream(name, NULL, 0, callback, userData);
         #ifdef _OS_ANDROID // use saveDir for settings on android devices
-            if (name && strcmp(name, "settings") == 0) {
+            if (name && strcmp(name, SETTINGS_FILENAME) == 0) {
                 osReadSlot(stream);
                 return;
             }
@@ -1757,7 +1759,7 @@ struct Stream {
     static void cacheWrite(const char *name, const char *data, int size, Callback *callback = NULL, void *userData = NULL) {
         Stream *stream = new Stream(name, data, size, callback, userData);
         #ifdef _OS_ANDROID // use saveDir for settings on android devices
-            if (name && strcmp(name, "settings") == 0) {
+            if (name && strcmp(name, SETTINGS_FILENAME) == 0) {
                 osWriteSlot(stream);
                 return;
             }

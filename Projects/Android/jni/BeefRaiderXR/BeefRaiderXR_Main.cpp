@@ -842,13 +842,13 @@ void VR_FrameSetup()
         static vec3 prevPos;
         lara = (Lara *) inventory->game->getLara();
 
-        pov = lara->camera->pointOfView;
+        pov = lara->camera->getPointOfView();
 
         //Reset here, if we don't then it can break things otherwise
         lara->velocity_6dof = vec2(0.f);
 
         //6DoF only in 1st person
-        if (lara->camera->pointOfView == ICamera::POV_1ST_PERSON)
+        if (pov == ICamera::POV_1ST_PERSON)
         {
             //Bit of a hack, but if Lara uses an item (not a med kit), don't re-enable 6dof until she returns to a valid state
             static bool usedItem = false;
@@ -891,7 +891,7 @@ void VR_FrameSetup()
 
 
     Input::hmd.head = head;
-    if (pov <= ICamera::POV_1ST_PERSON || forceUpdatePose)
+    if (pov == ICamera::POV_1ST_PERSON || forceUpdatePose)
     {
         Input::hmd.body.setRot(Input::hmd.head.getRot());
         Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
@@ -914,11 +914,11 @@ void VR_FrameSetup()
 
     //Left eye
     mat4 vL = head;
-    vL.setPos((head.right().xyz() * (-0.065f / 2.f)) * ONE_METER * Input::hmd.extraworldscaler);
+    vL.setPos((head.right().xyz() * (-0.065f / 2.f)) * ONE_METER);
 
     //Right eye
     mat4 vR = head;
-    vR.setPos((head.right().xyz() * (0.065f / 2.f)) * ONE_METER * Input::hmd.extraworldscaler);
+    vR.setPos((head.right().xyz() * (0.065f / 2.f)) * ONE_METER);
 
     Input::hmd.setView(pL, pR, vL, vR);
 }
@@ -1187,14 +1187,13 @@ void VR_HandleControllerInput() {
     Lara *lara = nullptr;
     int laraState = -1;
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
-    if (!inventory->isActive() &&
-        inventory->game->getLara())
+    if (inventory->game->getLara())
     {
         lara = (Lara*)inventory->game->getLara();
         laraState = lara->state;
-        pov = lara->camera->pointOfView;
+        pov = lara->camera->getPointOfView();
 
-        if (pov == ICamera::POV_1ST_PERSON)
+        //if (pov == ICamera::POV_1ST_PERSON)
         {
             static bool reversed = false;
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)
@@ -1496,39 +1495,35 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (lara && !(leftTrackedRemoteState_new.Touches & xrButton_ThumbRest))
+    if (lara && !inventory->active)
     {
         vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
         int quadrant = rightJoy.quadrant();
         static bool allowTogglePerspective = false;
         if (!allowTogglePerspective)
         {
-            if (rightJoy.length() < 0.2)
+            if (rightJoy.length() < 0.3)
             {
                 allowTogglePerspective = true;
             }
         }
         else
         {
-            if (rightJoy.length() > 0.2)
+            if (rightJoy.length() > 0.4)
             {
                 if (quadrant == 2)
                 {
-                    int perspective = lara->camera->pointOfView;
-                    if (++perspective == ICamera::POV_COUNT)
-                    {
-                        //Go back to 1st person, don't include the original game's 3rd person camera
-                        //as it is a nightmare in VR
-                        perspective = ICamera::POV_1ST_PERSON;
-                    }
+                    lara->camera->changeView(true);
+                }
+                else if (quadrant == 0)
+                {
+                    lara->camera->changeView(false);
+                }
 
-                    lara->camera->changeView((ICamera::PointOfView)perspective);
-
-                    //If switching to 3rd person force reset of position
-                    if (perspective == ICamera::POV_3RD_PERSON_VR_1)
-                    {
-                        forceUpdatePose = true;
-                    }
+                //If switching to 3rd person force reset of position
+                if (lara->camera->getPointOfView() == ICamera::POV_3RD_PERSON_VR_1)
+                {
+                    forceUpdatePose = true;
                 }
 
                 allowTogglePerspective = false;
@@ -1536,7 +1531,8 @@ void VR_HandleControllerInput() {
         }
     }
 
-    Input::hmd.extraworldscaler = (pov == ICamera::POV_3RD_PERSON_VR_3 && !inventory->active) ? 12.0f : 1.0f;
+
+    Input::hmd.extraworldscaler = pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE ? 12.0f : 1.0f;
 
     if (cheatsEnabled)
     {

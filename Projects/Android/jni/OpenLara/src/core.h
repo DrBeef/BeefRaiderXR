@@ -298,8 +298,18 @@ namespace Core {
             uint8 scale;
             uint8 vsync;
             uint8 stereo;
+
             uint8 handedness;
             uint8 turnmode;
+            uint8 braid;
+
+            // 1st only
+            // 1st / 3rd toggleable (toy mode included only if enabled)
+            // 1st with 3rd in cutscenes
+            // 3rd only toggle (toy mode included only if enabled)
+            uint8 pointOfViewMode; 
+            uint8 toyModeEnabled;
+
             void setFilter(Quality value) {
                 if (value > MEDIUM && !(support.maxAniso > 1))
                     value = MEDIUM;
@@ -878,11 +888,19 @@ namespace Core {
         settings.detail.vsync        = true;
         settings.detail.stereo       = Settings::STEREO_VR;
         settings.detail.scale        = Settings::SCALE_100;
+
+        settings.detail.handedness = 0;
+        settings.detail.pointOfViewMode = 0;
+        settings.detail.toyModeEnabled = 0;
+
+
         settings.audio.music         = SND_MAX_VOLUME;
         settings.audio.sound         = SND_MAX_VOLUME;
         settings.audio.reverb        = true;
         settings.audio.subtitles     = true;
         settings.audio.language      = defLang;
+
+
 
     // player 1
         {

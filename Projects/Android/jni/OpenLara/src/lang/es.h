@@ -350,6 +350,16 @@ const char *STR_ES[] = { ""
     , "La Ciudad perdida de Tinnos"
     , "Caverna del meteorito"
     , "Todos los santos"
+
+
+    // VR ADDITIONS
+    , "Lara's Braid"
+        , "POV Mode"
+        , "1st Person"
+        , "1st & 3rd Person"
+        , "1st, 3rd in Cutscenes"
+        , "3rd Person Toggle"
+    , "Enable Toy Mode"
 };
 
 #endif

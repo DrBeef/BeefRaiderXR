@@ -234,6 +234,16 @@ const char *STR_IT[] = { ""
     , "CittГ  perduta di Tinnos"
     , "Caverna del meteorite"
     , "All Hallows"
+
+
+        // VR ADDITIONS
+        , "Lara's Braid"
+        , "POV Mode"
+        , "1st Person"
+        , "1st & 3rd Person"
+        , "1st, 3rd in Cutscenes"
+        , "3rd Person Toggle"
+        , "Enable Toy Mode"
 };
 
 #endif

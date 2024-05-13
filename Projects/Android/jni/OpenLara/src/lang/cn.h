@@ -759,6 +759,16 @@ const char *STR_CN[] = { "\x11\x02\x8A\x02\x6C\x01\x54\x03\x02\xFF\xFF"
     , "\x11\x01\xE6\x01\xCD\x01\x01\x01\xCB\x02\xE5\x01\xAD\xFF\xFF"
     , "\x11\x02\xE1\x01\xA6\x02\x6D\x01\xB7\xFF\xFF"
     , "\x11\x02\xDC\x01\x6C\x01\xEB\xFF\xFF"
+
+
+        // VR ADDITIONS
+        , "Lara's Braid"
+        , "POV Mode"
+        , "1st Person"
+        , "1st & 3rd Person"
+        , "1st, 3rd in Cutscenes"
+        , "3rd Person Toggle"
+        , "Enable Toy Mode"
 };
 
 #endif
