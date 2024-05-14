@@ -887,16 +887,15 @@ void VR_FrameSetup()
     {
         Input::hmd.mrpos = laraPos;
         Input::hmd.zero = vrPosition;
-        forceUpdatePose = false;
     }
 
     vec3 zero = Input::hmd.zero;
 
 
-    Input::hmd.head = head;
     if (pov == ICamera::POV_1ST_PERSON || forceUpdatePose)
     {
-        Input::hmd.body.setRot(Input::hmd.head.getRot());
+        Input::hmd.head = head;
+        Input::hmd.body.setRot(head.getRot());
         Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
         vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
         zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
@@ -924,6 +923,9 @@ void VR_FrameSetup()
     vR.setPos((head.right().xyz() * (0.065f / 2.f)) * ONE_METER);
 
     Input::hmd.setView(pL, pR, vL, vR);
+
+    //Reset this flag if it was set
+    forceUpdatePose = false;
 }
 
 
@@ -1326,19 +1328,22 @@ void VR_HandleControllerInput() {
         else
         {
             mat4 m = snapTurnMat;
-            m.rotateX(-PIH / 2.0f);
+            m.rotateX(-PIH / 1.5f);
             mat4 cR = m * mat4(vrLeftControllerOrientation, vec3(0));
             Input::hmd.head.setRot(cR.getRot());
         }
     }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
     // is pressing the thumbstick like a modern game
-    else if (!actionPressed &&
+    else if ((!actionPressed || pov != ICamera::POV_1ST_PERSON) &&
             (Game::level && !Game::level->level.isCutsceneLevel()) &&
+            !inventory->active &&
             (laraState == Lara::STATE_STOP ||
               laraState == Lara::STATE_RUN ||
               laraState == Lara::STATE_WALK ||
-              laraState == Lara::STATE_FORWARD_JUMP))
+              laraState == Lara::STATE_FORWARD_JUMP ||
+              laraState == Lara::STATE_SURF_TREAD ||
+              laraState == Lara::STATE_SURF_SWIM))
     {
         //deadzone
         if (joy.length() > 0.2f)
@@ -1346,8 +1351,7 @@ void VR_HandleControllerInput() {
             mat4 addMat;
             addMat.identity();
             float additionalDirAngle =
-                    atan2(joy.x,
-                            joy.y);
+                    atan2(joy.x, joy.y);
             addMat.rotateY(-additionalDirAngle);
             Input::hmd.head.setRot((addMat * Input::hmd.body).getRot());
         }
@@ -1373,15 +1377,21 @@ void VR_HandleControllerInput() {
             joy.y = cosf(DEG2RAD * angle);
             joy.x = sinf(DEG2RAD * angle);
 
-            Input::hmd.head.setRot(Input::hmd.body.getRot());
+            if (pov == ICamera::POV_1ST_PERSON)
+            {
+                Input::hmd.head.setRot(Input::hmd.body.getRot());
+            }
         }
 
         Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
     }
 
-    if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
+    if (pov == ICamera::POV_1ST_PERSON)
     {
-        //Input::hmd.head.setRot(Input::hmd.body.getRot());
+        if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
+        {
+            Input::hmd.head.setRot(Input::hmd.body.getRot());
+        }
     }
 
     //Inventory controls

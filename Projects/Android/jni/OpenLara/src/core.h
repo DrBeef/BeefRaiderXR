@@ -892,11 +892,12 @@ namespace Core {
         settings.detail.stereo       = Settings::STEREO_VR;
         settings.detail.scale        = Settings::SCALE_100;
 
+        settings.detail.braid = 1;
         settings.detail.handedness = 0;
         settings.detail.pointOfViewMode = 0;
         settings.detail.auto3rdPerson = 1;
         settings.detail.toyModeEnabled = 0;
-        settings.detail.mixedRealityEnabled = 1;
+        settings.detail.mixedRealityEnabled = 0;
         settings.detail.firstPersonIKBody = 1;
 
 
