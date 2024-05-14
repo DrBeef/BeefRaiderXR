@@ -143,13 +143,15 @@ static const OptionItem optDetail[] = {
 #endif
     OptionItem( ),
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HANDEDNESS,   SETTINGS( detail.handedness    ), STR_RIGHT_HANDED, 0, 1),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 2),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 3),
 
     //Braid On/Off
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_BRAID,   SETTINGS( detail.braid    ), STR_OFF, 0, 1),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HIDE_IK_BODY,   SETTINGS( detail.firstPersonIKBody), STR_OFF, 0, 1),
 
-    //Perspective Mode
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_POV,   SETTINGS( detail.pointOfViewMode), STR_OPT_DETAIL_POV_1, 0, 3),
+    //POV Mode
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_POV,   SETTINGS( detail.pointOfViewMode), STR_OPT_DETAIL_POV_1, 0, 2),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_AUTO_3RD_PERSON,   SETTINGS( detail.auto3rdPerson), STR_OFF, 0, 1),
 
     //Toy Mode Enabled
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TOY_MODE,   SETTINGS( detail.toyModeEnabled), STR_OFF, 0, 1),

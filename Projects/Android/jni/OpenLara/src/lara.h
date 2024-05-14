@@ -285,6 +285,7 @@ struct Lara : Character {
         JOINT_MASK_UPPER      = JOINT_MASK_CHEST  | JOINT_MASK_ARM_L  | JOINT_MASK_ARM_R,       // without head
         JOINT_MASK_LOWER      = JOINT_MASK_HIPS   | JOINT_MASK_LEG_L  | JOINT_MASK_LEG_R,
         JOINT_MASK_BRAID      = JOINT_MASK_HEAD   | JOINT_MASK_CHEST  | JOINT_MASK_ARM_L1 | JOINT_MASK_ARM_L2 | JOINT_MASK_ARM_R1 | JOINT_MASK_ARM_R2,
+        JOINT_IK_BODY         = JOINT_MASK_HEAD   | JOINT_MASK_CHEST  | JOINT_MASK_HIPS   | JOINT_MASK_LEG_L  | JOINT_MASK_LEG_R  | JOINT_MASK_ARM_L1 | JOINT_MASK_ARM_L2 | JOINT_MASK_ARM_R1 | JOINT_MASK_ARM_R2,
     };
 
     struct Weapon {
@@ -809,7 +810,7 @@ struct Lara : Character {
 
     ICamera::PointOfView getCameraPOV()
     {
-        if (Core::settings.detail.pointOfViewMode == 2)
+        if (Core::settings.detail.auto3rdPerson)
         {
             if (camera->mode == ICamera::MODE_CUTSCENE ||
                 state == STATE_DIVE ||
@@ -4109,11 +4110,16 @@ struct Lara : Character {
 
     bool hideHead()
     {
-        //Not sure about this..
-//        if (state == STATE_BACK_JUMP || state == STATE_LEFT_JUMP || state == STATE_RIGHT_JUMP || state == STATE_HANDSTAND || state == STATE_SWAN_DIVE)
-//            return false;
-
         if (Core::pass != Core::passShadow && (camera->getPointOfView() == ICamera::POV_1ST_PERSON) && camera->viewIndex == -1 && game->getCamera() == camera)
+            return true;
+
+        return false;
+    }
+
+    bool hideBody()
+    {
+        if (!Core::settings.detail.firstPersonIKBody &&
+            Core::pass != Core::passShadow && (camera->getPointOfView() == ICamera::POV_1ST_PERSON) && camera->viewIndex == -1 && game->getCamera() == camera)
             return true;
 
         return false;
@@ -4123,6 +4129,8 @@ struct Lara : Character {
         uint32 visMask = visibleMask;
         if (hideHead()) // hide head in first person view // TODO: fix for firstPerson with viewIndex always == -1
             visibleMask &= ~JOINT_MASK_HEAD;
+        if (hideBody()) // does player want to hide body in first person?
+            visibleMask &= ~JOINT_IK_BODY;
         Controller::render(frustum, mesh, type, caustics);
 
         if (level->extra.laraJoints > -1) {

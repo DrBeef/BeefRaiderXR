@@ -170,28 +170,32 @@ struct Camera : ICamera {
         return pos;
     }
 
-    const int mode_max[4] = {2, 4, 2, 3};
-    const PointOfView POVModes[4][4] = {
+    const int mode_max[3] = {2, 4, 3};
+    const PointOfView POVModes[3][4] = {
         // First person Only
         {POV_1ST_PERSON, POV_3RD_PERSON_VR_TOY_MODE, POV_COUNT, POV_COUNT},
         // First and Third person
         {POV_1ST_PERSON, POV_3RD_PERSON_VR_1, POV_3RD_PERSON_VR_2, POV_3RD_PERSON_VR_TOY_MODE},
-        // First Person with 3rd for custscenes (handled by the Lara controller)
-        {POV_1ST_PERSON, POV_3RD_PERSON_VR_TOY_MODE, POV_COUNT, POV_COUNT},
         // 3rd Person Only
         {POV_3RD_PERSON_VR_1, POV_3RD_PERSON_VR_2, POV_3RD_PERSON_VR_TOY_MODE, POV_COUNT}
     };
 
-    PointOfView getPointOfView(bool hack = false)
+    PointOfView getPointOfView(bool skipOwnerCheck = false)
     {
+        if (Core::settings.detail.mixedRealityEnabled)
+        {
+            return POV_3RD_PERSON_VR_TOY_MODE;
+        }
+
         int _max = mode_max[Core::settings.detail.pointOfViewMode] - (Core::settings.detail.toyModeEnabled ? 0 : 1);
 
         PointOfView pov = (PointOfView)POVModes[Core::settings.detail.pointOfViewMode][(pointOfViewIndex % _max)];
 
-        if (Core::settings.detail.pointOfViewMode == 2 && !hack)
+        if (Core::settings.detail.auto3rdPerson && !skipOwnerCheck)
         {
             //Ask Lara...
-            if (owner->getCameraPOV() == POV_3RD_PERSON_VR_2)
+            if (pov == POV_1ST_PERSON &&  //only switch to 3rd if in 1st
+                (owner->getCameraPOV() == POV_3RD_PERSON_VR_2))
             {
                 return POV_3RD_PERSON_VR_2;
             }
@@ -217,7 +221,7 @@ struct Camera : ICamera {
         {
             povOffset = 384 * getPointOfView() * (getPointOfView() == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : 1.0f);
             
-            fpHead.pos = owner->getPos();
+            fpHead.pos = Core::settings.detail.mixedRealityEnabled ? Input::hmd.mrpos : owner->getPos();
             fpHead.pos.y -= 400 + (300 * Input::hmd.extraworldscaler);
             fpHead.pos -= Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler);
             fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);

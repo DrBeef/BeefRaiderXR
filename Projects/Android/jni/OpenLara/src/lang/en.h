@@ -22,7 +22,8 @@ const char *STR_EN[] = { ""
     , "On"
     , "Right Handed"
     , "Left Handed"
-    , "Snap Turn 45 Degrees"
+    , "Snap Turn"
+    , "Snap Turn 1st / Smooth 3rd"
     , "Smooth Turn Slow"
     , "Smooth Turn Fast"
     , "Low"
@@ -353,13 +354,14 @@ const char *STR_EN[] = { ""
 
 
 // VR ADDITIONS
-    , "Lara's Braid"
-    , "POV Mode"
-    , "1st Person"
-    , "1st & 3rd Person"
-    , "1st, 3rd in Cutscenes"
-    , "3rd Person Toggle"
-    , "Enable Toy Mode"
+        , "Lara's Braid"
+        , "POV Mode"
+        , "1st Person"
+        , "1st / 3rd Person Toggle"
+        , "3rd Person Toggle"
+        , "Enable Toy Mode"
+        , "1st Person IK Body"
+        , "Auto 3rd Person"
 };
 
 #endif

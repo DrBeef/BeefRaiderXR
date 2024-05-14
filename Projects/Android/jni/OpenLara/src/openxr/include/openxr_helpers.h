@@ -4,7 +4,7 @@
 #include <xr_linear.h>
 
 static inline XrTime ToXrTime(const double timeInSeconds) {
-    return (timeInSeconds * 1e9);
+    return (XrTime)(timeInSeconds * 1e9);
 }
 
 static inline double FromXrTime(const XrTime time) {

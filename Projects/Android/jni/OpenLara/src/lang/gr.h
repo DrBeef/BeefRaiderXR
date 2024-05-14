@@ -383,7 +383,8 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
     , "\x11\x01\x27\x01\x01\x01\x04\xFF\xFF"
         , "Right Handed"
         , "Left Handed"
-        , "Snap Turn 45 Degrees"
+        , "Snap Turn"
+    , "Snap Turn 1st / Smooth 3rd"
         , "Smooth Turn slow"
         , "Smooth Turn fast"
     , "\x11\x01\x2A\x01\x01\x01\x0A\x01\x0E\x01\x0F\x01\x13\xFF\xFF"
@@ -717,10 +718,11 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
         , "Lara's Braid"
         , "POV Mode"
         , "1st Person"
-        , "1st & 3rd Person"
-        , "1st, 3rd in Cutscenes"
+        , "1st / 3rd Person Toggle"
         , "3rd Person Toggle"
         , "Enable Toy Mode"
+        , "1st Person IK Body"
+        , "Auto 3rd Person"
 };
 
 #endif

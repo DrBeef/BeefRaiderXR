@@ -1378,6 +1378,8 @@ namespace TR {
                 CHECK_FILE("CREDITS2.PNG");      // BeefRaiderXR gold patrons
                 break;
         }
+
+        return nullptr;
     }
 
     const char* getGameScreen(LevelID id) {

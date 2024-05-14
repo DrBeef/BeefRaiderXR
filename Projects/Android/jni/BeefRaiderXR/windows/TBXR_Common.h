@@ -164,7 +164,7 @@ OXR_CheckErrors(XrInstance instance, XrResult result, const char* function, bool
 #endif
 
 
-typedef struct
+typedef struct _OVRAPP
 {
     bool                Initialised;
     bool				Resumed;

@@ -836,6 +836,7 @@ void VR_FrameSetup()
 
     //6DOF calculation
     Lara *lara = nullptr;
+    vec3 laraPos;
     if (!inventory->isActive() &&
         inventory->game->getLara())
     {
@@ -843,6 +844,7 @@ void VR_FrameSetup()
         lara = (Lara *) inventory->game->getLara();
 
         pov = lara->camera->getPointOfView();
+        laraPos = lara->getPos();
 
         //Reset here, if we don't then it can break things otherwise
         lara->velocity_6dof = vec2(0.f);
@@ -883,6 +885,7 @@ void VR_FrameSetup()
 
     if (Input::hmd.zero.x == INF || forceUpdatePose)
     {
+        Input::hmd.mrpos = laraPos;
         Input::hmd.zero = vrPosition;
         forceUpdatePose = false;
     }
@@ -1115,7 +1118,7 @@ void VR_HapticEvent(const char* event, int position, int flags, int intensity, f
 	}
 	else if (strcmp(event, "weapon_switch") == 0)
 	{
-		TBXR_Vibrate(250, Core::settings.detail.handedness == 1 ? 2 : 1, 0.8);
+		TBXR_Vibrate(250, Core::settings.detail.handedness == 1 ? 2 : 1, 0.8f);
 	}
 	else if (strcmp(event, "shotgun") == 0 || strcmp(event, "fireball") == 0)
 	{
@@ -1212,7 +1215,8 @@ void VR_HandleControllerInput() {
         }
     }
 
-    bool usingSnapTurn = Core::settings.detail.turnmode == 0;
+    bool usingSnapTurn = Core::settings.detail.turnmode == 0 ||
+        (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON);
 
     //If swimming allow either joystick to snap/smooth turn you
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
@@ -1221,7 +1225,7 @@ void VR_HandleControllerInput() {
         joystick.x += leftTrackedRemoteState_new.Joystick.x;
     }
 
-    if (!inventory->isActive())
+    if (!inventory->isActive() && laraState != Lara::STATE_DEATH && !Core::settings.detail.mixedRealityEnabled)
     {
         static int increaseSnap = true;
         {
@@ -1269,8 +1273,8 @@ void VR_HandleControllerInput() {
 
             if (!usingSnapTurn && fabs(joystick.x) > 0.1f) //smooth turn
             {
-                Input::hmd.nextrot -= (Core::settings.detail.turnmode *
-                        joystick.x);
+                int speed = Core::settings.detail.turnmode == 1 ? 1 : (Core::settings.detail.turnmode - 1);
+                Input::hmd.nextrot -= (speed * joystick.x);
                 if (Input::hmd.nextrot > 180.0f)
                 {
                     Input::hmd.nextrot -= 360.f;
@@ -1375,9 +1379,9 @@ void VR_HandleControllerInput() {
         Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
     }
 
-    if (laraState == Lara::STATE_STOP)
+    if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
     {
-        Input::hmd.head.setRot(Input::hmd.body.getRot());
+        //Input::hmd.head.setRot(Input::hmd.body.getRot());
     }
 
     //Inventory controls
@@ -1495,21 +1499,21 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (lara && !inventory->active)
+    if (lara && !inventory->active && !Core::settings.detail.mixedRealityEnabled)
     {
         vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
         int quadrant = rightJoy.quadrant();
         static bool allowTogglePerspective = false;
         if (!allowTogglePerspective)
         {
-            if (rightJoy.length() < 0.3)
+            if (rightJoy.length() < 0.6)
             {
                 allowTogglePerspective = true;
             }
         }
         else
         {
-            if (rightJoy.length() > 0.4)
+            if (rightJoy.length() > 0.7)
             {
                 if (quadrant == 2)
                 {
@@ -1532,7 +1536,8 @@ void VR_HandleControllerInput() {
     }
 
 
-    Input::hmd.extraworldscaler = pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE ? 12.0f : 1.0f;
+    Input::hmd.extraworldscaler = Core::settings.detail.mixedRealityEnabled ? 24.0f :
+        (pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE ? 12.0f : 1.0f);
 
     if (cheatsEnabled)
     {

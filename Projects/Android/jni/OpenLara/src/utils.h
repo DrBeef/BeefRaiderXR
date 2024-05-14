@@ -399,7 +399,7 @@ struct vec2 {
     int quadrant()  const {
         float angle = RAD2DEG * atan2f(x, y);
         if (angle < 0.f) angle += 360.f;
-        return (angle + 45.f) / 90.f;
+        return (int)((angle + 45.f) / 90.f);
     }
 
     vec2 lerp(const vec2 &v, const float t) const {

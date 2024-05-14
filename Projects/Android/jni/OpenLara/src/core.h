@@ -302,13 +302,16 @@ namespace Core {
             uint8 handedness;
             uint8 turnmode;
             uint8 braid;
+            uint8 firstPersonIKBody;
 
             // 1st only
             // 1st / 3rd toggleable (toy mode included only if enabled)
-            // 1st with 3rd in cutscenes
             // 3rd only toggle (toy mode included only if enabled)
-            uint8 pointOfViewMode; 
+            uint8 pointOfViewMode;
+            // Switch to 3rd person automatically on interaction/cutscene
+            uint8 auto3rdPerson;
             uint8 toyModeEnabled;
+            uint8 mixedRealityEnabled;
 
             void setFilter(Quality value) {
                 if (value > MEDIUM && !(support.maxAniso > 1))
@@ -891,7 +894,10 @@ namespace Core {
 
         settings.detail.handedness = 0;
         settings.detail.pointOfViewMode = 0;
+        settings.detail.auto3rdPerson = 1;
         settings.detail.toyModeEnabled = 0;
+        settings.detail.mixedRealityEnabled = 1;
+        settings.detail.firstPersonIKBody = 1;
 
 
         settings.audio.music         = SND_MAX_VOLUME;
