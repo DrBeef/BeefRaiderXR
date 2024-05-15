@@ -5,7 +5,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.2'
+        classpath 'com.android.tools.build:gradle:4.1.3'
     }
 }
 
@@ -17,8 +17,6 @@ android {
   // The filename doesn't effect the Android installation process.
   // Use only letters to remain compatible with the package name.
   project.archivesBaseName = "beefraiderxr"
-
-    namespace = "com.drbeef.beefraiderxr"
 
   defaultConfig {
     // Gradle replaces the manifest package with this value, which must
@@ -37,8 +35,8 @@ android {
           }
       }
 
-      minSdkVersion 32
-      targetSdkVersion 32
+      minSdkVersion 29
+      targetSdkVersion 29
   }
 
     externalNativeBuild {
@@ -119,13 +117,17 @@ android {
         disable 'ExpiredTargetSdkVersion'
     }
 
+    packagingOptions {
+        exclude 'lib/arm64-v8a/libopenxr_loader.so'
+    }
+
     compileOptions {
         sourceCompatibility = '1.8'
         targetCompatibility = '1.8'
     }
-    compileSdkVersion = 32
+    compileSdkVersion = 29
     buildToolsVersion = '29.0.3'
-    ndkVersion '25.1.8937393'
+    ndkVersion '21.1.6352462'
 }
 
 dependencies {
