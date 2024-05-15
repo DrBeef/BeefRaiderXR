@@ -19,7 +19,7 @@ LOCAL_LDLIBS +=  -lGLESv3 -landroid -lEGL -llog -lz -lOpenSLES
 #Needed so lib can be loaded (_exit error)
 #LOCAL_LDLIBS += -fuse-ld=bfd
 
-LOCAL_STATIC_LIBRARIES := sigc libzip libpng libminizip
+# LOCAL_STATIC_LIBRARIES := sigc libzip libpng libminizip
 LOCAL_SHARED_LIBRARIES := openxr_loader
 
 

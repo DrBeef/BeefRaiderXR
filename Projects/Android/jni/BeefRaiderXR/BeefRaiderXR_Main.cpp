@@ -1390,13 +1390,17 @@ void VR_HandleControllerInput() {
             joy.y = cosf(DEG2RAD * angle);
             joy.x = sinf(DEG2RAD * angle);
 
-            if (pov == ICamera::POV_1ST_PERSON)
+            if (pov != ICamera::POV_1ST_PERSON)
+            {
+                //Adjust so the 
+                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2 * DEG2RAD) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
+            }
+            else
             {
                 Input::hmd.head.setRot(Input::hmd.body.getRot());
+                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
             }
         }
-
-        Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
     }
 
     if (pov == ICamera::POV_1ST_PERSON)
@@ -1587,17 +1591,20 @@ void VR_HandleControllerInput() {
         {
             if (rightJoy.length() > 0.7)
             {
+                bool switched = false;
                 if (quadrant == 2)
                 {
                     lara->camera->changeView(true);
+                    switched = true;
                 }
                 else if (quadrant == 0)
                 {
                     lara->camera->changeView(false);
+                    switched = true;
                 }
 
                 //If switching to 3rd person force reset of position
-                if (lara->camera->getPointOfView() == ICamera::POV_3RD_PERSON_VR_1)
+                if (switched && lara->camera->getPointOfView() == ICamera::POV_3RD_PERSON_VR_1)
                 {
                     forceUpdatePose = true;
                 }
