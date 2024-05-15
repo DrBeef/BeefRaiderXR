@@ -39,6 +39,7 @@ namespace Input {
     struct HMD {
         mat4 head; // heading
         mat4 body; // body facing direction (set from HMD)
+        float angleY; // the actual HMD yaw
         vec3 mrpos; //Mixed Reality position
         float nextrot; // additional yaw angle from snap/smooth turn to be added next frame
         float extrarot; // additional yaw angle from snap/smooth turn

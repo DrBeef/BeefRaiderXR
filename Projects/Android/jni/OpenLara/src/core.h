@@ -894,9 +894,9 @@ namespace Core {
 
         settings.detail.braid = 1;
         settings.detail.handedness = 0;
-        settings.detail.pointOfViewMode = 0;
+        settings.detail.pointOfViewMode = 1;
         settings.detail.auto3rdPerson = 1;
-        settings.detail.toyModeEnabled = 0;
+        settings.detail.toyModeEnabled = 1;
         settings.detail.mixedRealityEnabled = 0;
         settings.detail.firstPersonIKBody = 1;
 

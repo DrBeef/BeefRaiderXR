@@ -219,13 +219,20 @@ struct Camera : ICamera {
         int povOffset = 0;
         if (mode != MODE_CUTSCENE && getPointOfView() >= POV_3RD_PERSON_VR_1)
         {
-            povOffset = 384 * getPointOfView() * (getPointOfView() == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : 1.0f);
-            
-            fpHead.pos = Core::settings.detail.mixedRealityEnabled ? Input::hmd.mrpos : owner->getPos();
-            fpHead.pos.y -= 400 + (300 * Input::hmd.extraworldscaler);
-            fpHead.pos -= Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler);
-            fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
+            if (Core::settings.detail.mixedRealityEnabled)
+            {
+                fpHead.pos = Input::hmd.mrpos;
+                fpHead.pos.y -= (200 * Input::hmd.extraworldscaler);
+            }
+            else
+            {
+                povOffset = 384 * getPointOfView() * (getPointOfView() == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : 1.0f);
+                fpHead.pos = owner->getPos();
+                fpHead.pos.y -= 400 + (300 * Input::hmd.extraworldscaler);
+                fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
+            }
 
+            fpHead.pos -= Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler);
             fpHead.rot = fpHead.rot * quat(vec3(1, 0, 0), PI);
         }
         else
@@ -255,18 +262,12 @@ struct Camera : ICamera {
         //Now we make sure we don't clip through anything
         vec3 opos = owner->pos;
         opos.y = fpHead.pos.y;
-        /*vec3 hitpos = owner->trace(owner->getRoomIndex(), opos, t, room, false);
-        if ((hitpos - opos).length() < (fpHead.pos - opos).length())
-        {
-            fpHead.pos = hitpos;
-        }*/
-
         TR::Location from, to;
         from.room = getRoomIndex();
         from.pos = opos;
         to.pos = fpHead.pos;
 
-        if (getPointOfView() == POV_3RD_PERSON_VR_1 || getPointOfView() == POV_3RD_PERSON_VR_1)
+        if (getPointOfView() == POV_3RD_PERSON_VR_1 || getPointOfView() == POV_3RD_PERSON_VR_2)
         {
             owner->trace(from, to);
         }        

@@ -891,6 +891,7 @@ void VR_FrameSetup()
 
     vec3 zero = Input::hmd.zero;
 
+    Input::hmd.angleY = Controller::getAngleAbs(mat4(vrOrientation, vec3(0)).dir().xyz()).y;
 
     if (pov == ICamera::POV_1ST_PERSON || forceUpdatePose)
     {
@@ -1207,6 +1208,12 @@ void VR_HandleControllerInput() {
                     lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
                 {
                     Input::hmd.nextrot += 180.f;
+
+                    //Ensure Lara rotates so she can ledge grab
+                    if (pov != ICamera::POV_1ST_PERSON)
+                    {
+                        Input::hmd.head.rotateY(PI);
+                    }
                     reversed = true;
                 }
             }
@@ -1353,6 +1360,12 @@ void VR_HandleControllerInput() {
             float additionalDirAngle =
                     atan2(joy.x, joy.y);
             addMat.rotateY(-additionalDirAngle);
+
+            if (Core::settings.detail.mixedRealityEnabled)
+            {
+                addMat.rotateY(-Input::hmd.angleY);
+            }
+
             Input::hmd.head.setRot((addMat * Input::hmd.body).getRot());
         }
         else if (laraState == Lara::STATE_RUN)
@@ -1474,7 +1487,8 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (!Game::level->level.isTitle())
+    if (!Core::settings.detail.mixedRealityEnabled &&
+        !Game::level->level.isTitle())
     {
         if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
             rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
@@ -1482,6 +1496,54 @@ void VR_HandleControllerInput() {
                 rightTrackedRemoteState_old.GripTrigger > 0.4f))
         {
             inventory->toggle(0, Inventory::PAGE_INVENTORY);
+        }
+    }
+
+    //World orientation in mixed reality mode
+    if (Core::settings.detail.mixedRealityEnabled)
+    {
+        // easier just dumping these here as statics than creating member variables
+        static vec3 left;
+        static vec3 right;
+        static bool snap = false;
+        if (!snap)
+        {
+            if (rightTrackedRemoteState_new.GripTrigger > 0.7f &&
+                leftTrackedRemoteState_new.GripTrigger > 0.7f)
+            {
+                //Record the current controller locations
+                right = vrRightControllerPosition;
+                left = vrLeftControllerPosition;
+                snap = true;
+            }
+        }
+        else
+        {
+            if (rightTrackedRemoteState_new.GripTrigger < 0.6f ||
+                leftTrackedRemoteState_new.GripTrigger < 0.6f)
+            {
+                snap = false;
+            }
+            else
+            {
+                //World orienting bit..
+                float angle = ((left - right).angleY() - (vrLeftControllerPosition - vrRightControllerPosition).angleY());
+                Input::hmd.nextrot -= RAD2DEG * angle;
+                vec3 poschange;
+                poschange.x = (((left.x + right.x) / 2.0f) - ((vrLeftControllerPosition.x + vrRightControllerPosition.x) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
+                poschange.y = (((left.y + right.y) / 2.0f) - ((vrLeftControllerPosition.y + vrRightControllerPosition.y) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
+                poschange.z = (((left.z + right.z) / 2.0f) - ((vrLeftControllerPosition.z + vrRightControllerPosition.z) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
+                poschange = poschange.rotateY((-Input::hmd.extrarot * DEG2RAD));
+                Input::hmd.mrpos.x += poschange.x * 2.f;
+                Input::hmd.mrpos.y -= poschange.y * 2.f;
+                Input::hmd.mrpos.z -= poschange.z * 2.f;
+                Input::hmd.extraworldscaler += ((left - right).length() - (vrLeftControllerPosition - vrRightControllerPosition).length()) * 3.f * Input::hmd.extraworldscaler;
+                Input::hmd.extraworldscaler = clamp(Input::hmd.extraworldscaler, 1.0f, 100.0f);
+
+                //Record the current controller locations
+                right = vrRightControllerPosition;
+                left = vrLeftControllerPosition;
+            }
         }
     }
 
@@ -1545,9 +1607,10 @@ void VR_HandleControllerInput() {
         }
     }
 
-
-    Input::hmd.extraworldscaler = Core::settings.detail.mixedRealityEnabled ? 24.0f :
-        (pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE ? 12.0f : 1.0f);
+    if (!Core::settings.detail.mixedRealityEnabled)
+    {
+        Input::hmd.extraworldscaler = pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE ? 12.0f : 1.0f;
+    }
 
     if (cheatsEnabled)
     {
