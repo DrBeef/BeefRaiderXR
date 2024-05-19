@@ -285,7 +285,7 @@ namespace UI {
                 h.identity();
                 vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
                 h.rotateY(-ang.y);
-                h.setPos(Input::hmd.body.getPos());
+                h.setPos(Input::hmd.body.getPos() * ONE_METER);
                 head = h.inverseOrtho();
             }
             Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];

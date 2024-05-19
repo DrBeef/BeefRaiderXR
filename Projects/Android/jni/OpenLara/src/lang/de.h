@@ -361,6 +361,7 @@ const char *STR_DE[] = { ""
         , "Enable Toy Mode"
         , "1st Person IK Body"
         , "Auto 3rd Person"
+        , "Mixed Reality Mode"
 };
 
 #endif

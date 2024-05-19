@@ -94,6 +94,12 @@ struct Camera : ICamera {
         target.pos  = owner->pos;
         target.room = eye.room;
 
+        Input::hmd.mrorg = owner->pos;
+        if (Core::settings.detail.mixedRealityEnabled)
+        {
+            Input::hmd.extraworldscaler = 15;
+        }
+
         target.pos.y -= 1024;
         eye.pos.z  -= 100;
 
@@ -217,7 +223,8 @@ struct Camera : ICamera {
         Basis &joint = owner->getJoint(owner->jointHead);
 
         int povOffset = 0;
-        if (mode != MODE_CUTSCENE && getPointOfView() >= POV_3RD_PERSON_VR_1)
+        PointOfView pov = getPointOfView();
+        if (mode != MODE_CUTSCENE && pov >= POV_3RD_PERSON_VR_1)
         {
             if (Core::settings.detail.mixedRealityEnabled)
             {
@@ -226,13 +233,31 @@ struct Camera : ICamera {
             }
             else
             {
-                povOffset = 384 * getPointOfView() * (getPointOfView() == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : 1.0f);
+                static float offsetMult = 1.0f;
+                if (pov != POV_3RD_PERSON_VR_TOY_MODE)
+                {
+                    if (owner->holdingWeapons())
+                    {
+                        offsetMult *= 1.01;
+                    }
+                    else
+                    {
+                        offsetMult *= 0.99f;
+                    }
+                }
+                else
+                {
+                    offsetMult = 1.f;
+                }
+                offsetMult = clamp(offsetMult, 1.f, 2.f);
+
+                povOffset = 384 * pov * (pov == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : 1.0f) * offsetMult;
                 fpHead.pos = owner->getPos();
                 fpHead.pos.y -= 400 + (300 * Input::hmd.extraworldscaler);
                 fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
+                fpHead.pos -= Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler);
             }
 
-            fpHead.pos -= Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler);
             fpHead.rot = fpHead.rot * quat(vec3(1, 0, 0), PI);
         }
         else

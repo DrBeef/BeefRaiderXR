@@ -80,6 +80,11 @@ struct Character : Controller {
         return flags.state == TR::Entity::asActive && !flags.invisible && health > 0.0f;
     }
 
+    virtual bool holdingWeapons()
+    {
+        return false;
+    }
+
     virtual int getRoomIndex() const {
         int index = Controller::getRoomIndex();
         

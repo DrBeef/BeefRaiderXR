@@ -672,6 +672,11 @@ struct Lara : Character {
                && state != STATE_USE_PUZZLE; // && (state == STATE_STOP || state == STATE_TREAD || state == STATE_SURF_TREAD);
     }
 
+    virtual bool holdingWeapons()
+    {
+        return (wpnState != Weapon::IS_HIDDEN);
+    }
+
     TR::Entity::Type getItemHands() {
         return (wpnState == Weapon::IS_HIDDEN) ? TR::Entity::NONE : wpnCurrent;
     }
@@ -816,9 +821,12 @@ struct Lara : Character {
                 state == STATE_DIVE ||
                 state == STATE_SWITCH_DOWN ||
                 state == STATE_SWITCH_UP ||
+                state == STATE_PULL_BLOCK ||
+                state == STATE_PUSH_BLOCK ||
                 state == STATE_USE_KEY ||
                 state == STATE_USE_PUZZLE ||
                 state == STATE_PICK_UP ||
+                state == STATE_DEATH ||
                 state == STATE_UNDERWATER_DEATH ||
                 animation.index == ANIM_SWITCH_BIG_DOWN ||
                 animation.index == ANIM_SWITCH_BIG_UP)

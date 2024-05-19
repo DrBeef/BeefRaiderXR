@@ -800,6 +800,15 @@ int VR_SetRefreshRate(int refreshRate)
 	return 0;
 }
 
+extern "C" {
+    bool IsMRMode()
+    {
+        return 	(strstr(gAppState.OpenXRHMD, "meta") != NULL) &&
+            !VR_UseScreenLayer() &&
+            Core::settings.detail.mixedRealityEnabled && !inventory->isActive();
+    }
+}
+
 //All the stuff we want to do each frame specifically for this game
 void VR_FrameSetup()
 {
@@ -885,7 +894,7 @@ void VR_FrameSetup()
 
     if (Input::hmd.zero.x == INF || forceUpdatePose)
     {
-        Input::hmd.mrpos = laraPos;
+        Input::hmd.mrorg = Input::hmd.mrpos;
         Input::hmd.zero = vrPosition;
     }
 
@@ -897,7 +906,10 @@ void VR_FrameSetup()
     {
         Input::hmd.head = head;
         Input::hmd.body.setRot(head.getRot());
-        Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+        if (!Core::settings.detail.mixedRealityEnabled)
+        {
+            Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+        }
         vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
         zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
     }
@@ -914,6 +926,7 @@ void VR_FrameSetup()
     Input::hmd.head.setPos(vrPosition);
     Input::hmd.body.setPos(vrPosition - zero);
     Input::hmd.body.e03 *= -1.0f; // have to do this to correct 3rd person X position
+    Input::hmd.mrpos = Input::hmd.mrorg - (Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler));
 
     //Left eye
     mat4 vL = head;
@@ -1234,7 +1247,10 @@ void VR_HandleControllerInput() {
         joystick.x += leftTrackedRemoteState_new.Joystick.x;
     }
 
-    if (!inventory->isActive() && laraState != Lara::STATE_DEATH && !Core::settings.detail.mixedRealityEnabled)
+    if (!inventory->isActive() && laraState != Lara::STATE_DEATH &&
+        laraState != Lara::STATE_PULL_BLOCK &&
+        laraState != Lara::STATE_PUSH_BLOCK
+        && !Core::settings.detail.mixedRealityEnabled)
     {
         static int increaseSnap = true;
         {
@@ -1307,7 +1323,6 @@ void VR_HandleControllerInput() {
 
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
     //Remove this hoppping back for now
-#if 0
     static bool hoppingBack = false;
     //Allow Lara to hop back if walking is pressed and she's currently stood still
     if (hoppingBack || 
@@ -1321,7 +1336,6 @@ void VR_HandleControllerInput() {
         hoppingBack = joy.length() > 0.001f;
     }
     else 
-#endif  
     if (laraState == Lara::STATE_SWIM ||
         laraState == Lara::STATE_TREAD ||
         laraState == Lara::STATE_GLIDE)
@@ -1390,9 +1404,14 @@ void VR_HandleControllerInput() {
             joy.y = cosf(DEG2RAD * angle);
             joy.x = sinf(DEG2RAD * angle);
 
-            if (pov != ICamera::POV_1ST_PERSON)
+            if (Core::settings.detail.mixedRealityEnabled)
             {
-                //Adjust so the 
+                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot * DEG2RAD)
+                -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
+                 +Input::hmd.angleY));
+            }
+            else if (pov != ICamera::POV_1ST_PERSON)
+            {
                 Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2 * DEG2RAD) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
             }
             else
@@ -1400,6 +1419,10 @@ void VR_HandleControllerInput() {
                 Input::hmd.head.setRot(Input::hmd.body.getRot());
                 Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y));
             }
+        }
+        else
+        {
+            Input::setJoyPos(joyRight, jkL, vec2(0));
         }
     }
 
@@ -1509,7 +1532,9 @@ void VR_HandleControllerInput() {
         // easier just dumping these here as statics than creating member variables
         static vec3 left;
         static vec3 right;
+        static vec3 cpos;
         static bool snap = false;
+        static float angleY;
         if (!snap)
         {
             if (rightTrackedRemoteState_new.GripTrigger > 0.7f &&
@@ -1518,6 +1543,21 @@ void VR_HandleControllerInput() {
                 //Record the current controller locations
                 right = vrRightControllerPosition;
                 left = vrLeftControllerPosition;
+                angleY = 0;
+                cpos = vec3(0);
+
+                vec3 anchor;
+                anchor = (vrLeftControllerPosition + vrRightControllerPosition) / 2.0f;
+                anchor = anchor.rotateY((-Input::hmd.extrarot * DEG2RAD));
+                anchor = Input::hmd.head.getPos() - anchor;
+                anchor *= ONE_METER * Input::hmd.extraworldscaler;
+                anchor.y = 0;
+                anchor.x *= -1;
+                Input::hmd.mranchor = anchor;
+
+                //Reset the origins
+                forceUpdatePose = true;
+
                 snap = true;
             }
         }
@@ -1526,21 +1566,31 @@ void VR_HandleControllerInput() {
             if (rightTrackedRemoteState_new.GripTrigger < 0.6f ||
                 leftTrackedRemoteState_new.GripTrigger < 0.6f)
             {
+                vec3 a = Input::hmd.mranchor;
+                Input::hmd.mrorg += a;
+                a = a.rotateY(angleY);
+                Input::hmd.mrorg -= a;
                 snap = false;
             }
             else
             {
                 //World orienting bit..
                 float angle = ((left - right).angleY() - (vrLeftControllerPosition - vrRightControllerPosition).angleY());
+                angleY -= angle;
                 Input::hmd.nextrot -= RAD2DEG * angle;
+
                 vec3 poschange;
-                poschange.x = (((left.x + right.x) / 2.0f) - ((vrLeftControllerPosition.x + vrRightControllerPosition.x) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
-                poschange.y = (((left.y + right.y) / 2.0f) - ((vrLeftControllerPosition.y + vrRightControllerPosition.y) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
-                poschange.z = (((left.z + right.z) / 2.0f) - ((vrLeftControllerPosition.z + vrRightControllerPosition.z) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
+                poschange = (((left + right) / 2.0f) - ((vrLeftControllerPosition + vrRightControllerPosition) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
                 poschange = poschange.rotateY((-Input::hmd.extrarot * DEG2RAD));
-                Input::hmd.mrpos.x += poschange.x * 2.f;
-                Input::hmd.mrpos.y -= poschange.y * 2.f;
-                Input::hmd.mrpos.z -= poschange.z * 2.f;
+                poschange.x *= -1;
+                Input::hmd.mrorg -= poschange;
+
+                vec3 body = Input::hmd.body.getPos() * (ONE_METER * Input::hmd.extraworldscaler);
+                vec3 a = Input::hmd.mranchor;
+                Input::hmd.mrpos = Input::hmd.mrorg - body + a;
+                a = a.rotateY(angleY);
+                Input::hmd.mrpos -= a;
+
                 Input::hmd.extraworldscaler += ((left - right).length() - (vrLeftControllerPosition - vrRightControllerPosition).length()) * 3.f * Input::hmd.extraworldscaler;
                 Input::hmd.extraworldscaler = clamp(Input::hmd.extraworldscaler, 1.0f, 100.0f);
 
@@ -1578,7 +1628,7 @@ void VR_HandleControllerInput() {
     if (lara && !inventory->active && !Core::settings.detail.mixedRealityEnabled)
     {
         vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
-        int quadrant = rightJoy.quadrant();
+        int sector = rightJoy.sector(8);
         static bool allowTogglePerspective = false;
         if (!allowTogglePerspective)
         {
@@ -1592,12 +1642,12 @@ void VR_HandleControllerInput() {
             if (rightJoy.length() > 0.7)
             {
                 bool switched = false;
-                if (quadrant == 2)
+                if (sector == 4)
                 {
                     lara->camera->changeView(true);
                     switched = true;
                 }
-                else if (quadrant == 0)
+                else if (sector == 0)
                 {
                     lara->camera->changeView(false);
                     switched = true;

@@ -246,6 +246,7 @@ const char *STR_IT[] = { ""
         , "Enable Toy Mode"
         , "1st Person IK Body"
         , "Auto 3rd Person"
+        , "Mixed Reality Mode"
 };
 
 #endif

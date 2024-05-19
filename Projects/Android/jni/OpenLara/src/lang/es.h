@@ -362,6 +362,7 @@ const char *STR_ES[] = { ""
     , "Enable Toy Mode"
         , "1st Person IK Body"
         , "Auto 3rd Person"
+        , "Mixed Reality Mode"
 };
 
 #endif

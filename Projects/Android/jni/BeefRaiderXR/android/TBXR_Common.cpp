@@ -75,7 +75,9 @@ const char* const requiredExtensionNames_meta[] = {
 		XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME,
 		XR_KHR_ANDROID_THREAD_SETTINGS_EXTENSION_NAME,
 		XR_FB_DISPLAY_REFRESH_RATE_EXTENSION_NAME,
-		XR_FB_COLOR_SPACE_EXTENSION_NAME};
+		XR_FB_COLOR_SPACE_EXTENSION_NAME,
+        XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME,
+        XR_FB_PASSTHROUGH_EXTENSION_NAME};
 
 #define XR_PICO_CONFIGS_EXT_EXTENSION_NAME "XR_PICO_configs_ext"
 
@@ -1862,13 +1864,17 @@ int TBXR_GetRefresh()
 
 #define GL_FRAMEBUFFER_SRGB               0x8DB9
 
+extern "C" {
+    bool IsMRMode();
+}
+
 void TBXR_ClearFrameBuffer(int width, int height)
 {
 	glEnable( GL_SCISSOR_TEST );
 	glViewport( 0, 0, width, height );
 
 	//Black
-	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+	glClearColor( 0.0f, 0.0f, 0.0f, IsMRMode() ? 0.0f : 1.0f );
 
 	glScissor( 0, 0, width, height );
 	glClear( GL_COLOR_BUFFER_BIT );
@@ -1884,7 +1890,7 @@ void TBXR_prepareEyeBuffer(int eye )
 	ovrFramebuffer* frameBuffer = &(gAppState.Renderer.FrameBuffer[eye]);
 	ovrFramebuffer_Acquire(frameBuffer);
 	ovrFramebuffer_SetCurrent(frameBuffer);
-	//TBXR_ClearFrameBuffer(frameBuffer->ColorSwapChain.Width, frameBuffer->ColorSwapChain.Height);
+	TBXR_ClearFrameBuffer(frameBuffer->ColorSwapChain.Width, frameBuffer->ColorSwapChain.Height);
 
     //This is a bit of a hack, but we need to do this to correct for the fact that the engine uses linear RGB colorspace
     //but openxr uses SRGB (or something, must admit I don't really understand, but adding this works to make it look good again)
@@ -1940,6 +1946,29 @@ void TBXR_updateProjections()
 			gAppState.Views));
 }
 
+#define DECL_PFN(pfn)     PFN_##pfn pfn = nullptr
+#define INIT_PFN(pfn)     OXR(xrGetInstanceProcAddr(gAppState.Instance, #pfn, (PFN_xrVoidFunction*)(&pfn)))
+
+DECL_PFN(xrCreatePassthroughFB);
+DECL_PFN(xrDestroyPassthroughFB);
+DECL_PFN(xrPassthroughStartFB);
+DECL_PFN(xrPassthroughPauseFB);
+DECL_PFN(xrCreatePassthroughLayerFB);
+DECL_PFN(xrDestroyPassthroughLayerFB);
+DECL_PFN(xrPassthroughLayerPauseFB);
+DECL_PFN(xrPassthroughLayerResumeFB);
+
+void initPassthroughFuncs() {
+    INIT_PFN(xrCreatePassthroughFB);
+    INIT_PFN(xrDestroyPassthroughFB);
+    INIT_PFN(xrPassthroughStartFB);
+    INIT_PFN(xrPassthroughPauseFB);
+    INIT_PFN(xrCreatePassthroughLayerFB);
+    INIT_PFN(xrDestroyPassthroughLayerFB);
+    INIT_PFN(xrPassthroughLayerPauseFB);
+    INIT_PFN(xrPassthroughLayerResumeFB);
+}
+
 void TBXR_submitFrame()
 {
 	if (gAppState.SessionActive == GL_FALSE) {
@@ -1957,20 +1986,57 @@ void TBXR_submitFrame()
 
 	XrCompositionLayerProjection projection_layer;
 	XrCompositionLayerProjectionView projection_layer_elements[2] = {};
-	XrCompositionLayerQuad quad_layer;
+	XrCompositionLayerQuad quad_layer = {};
+    XrCompositionLayerPassthroughFB passthrough_layer = {};
+    static XrPassthroughLayerFB passthrough_layer_fb = XR_NULL_HANDLE;
+    static XrPassthroughFB      passthrough      = XR_NULL_HANDLE;
+
+
+    static bool passthroughinit = false;
+    if (IsMRMode())
+    {
+        if (!passthroughinit)
+        {
+            initPassthroughFuncs();
+            passthroughinit = true;
+
+            const XrPassthroughCreateInfoFB ptci = {XR_TYPE_PASSTHROUGH_CREATE_INFO_FB};
+            OXR(xrCreatePassthroughFB(gAppState.Session, &ptci, &passthrough));
+
+            const XrPassthroughLayerCreateInfoFB plci = {XR_TYPE_PASSTHROUGH_LAYER_CREATE_INFO_FB,
+                                                         nullptr,
+                                                         passthrough,
+                                                         XR_PASSTHROUGH_IS_RUNNING_AT_CREATION_BIT_FB,
+                                                         XR_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION_FB};
+            OXR(xrCreatePassthroughLayerFB(gAppState.Session, &plci, &passthrough_layer_fb));
+            OXR(xrPassthroughStartFB(passthrough));
+            OXR(xrPassthroughLayerResumeFB(passthrough_layer_fb));
+        }
+
+        passthrough_layer.type = XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB;
+        passthrough_layer.layerHandle = passthrough_layer_fb;
+        passthrough_layer.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+        passthrough_layer.space = XR_NULL_HANDLE;
+        layers[layerCount++] = (const XrCompositionLayerBaseHeader *) &passthrough_layer;
+    }
+    else
+    {
+        if (passthroughinit)
+        {
+            OXR(xrPassthroughLayerPauseFB(passthrough_layer_fb));
+            OXR(xrPassthroughPauseFB(passthrough));
+            OXR(xrDestroyPassthroughLayerFB(passthrough_layer_fb));
+            OXR(xrDestroyPassthroughFB(passthrough));
+
+            passthrough_layer_fb = XR_NULL_HANDLE;
+            passthrough      = XR_NULL_HANDLE;
+
+            passthroughinit = false;
+        }
+    }
 
 	if (!VR_UseScreenLayer()) 
 	{
-
-		if (usingScreenLayer) {
-			usingScreenLayer = false;
-			float configuredSuperSampling = Cvar_VariableValue("vr_super_sampling");
-			if (configuredSuperSampling != 0.0f && configuredSuperSampling != superSampling)
-			{
-				VR_ResetRenderer();
-			}
-		}
-
 		memset(&projection_layer, 0, sizeof(XrCompositionLayerProjection));
 		projection_layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
 		projection_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;

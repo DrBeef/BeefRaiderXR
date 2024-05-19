@@ -156,6 +156,11 @@ static const OptionItem optDetail[] = {
     //Toy Mode Enabled
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TOY_MODE,   SETTINGS( detail.toyModeEnabled), STR_OFF, 0, 1),
 
+#ifdef ANDROID
+    //Mixed Reality
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_MIXED_REALITY,   SETTINGS( detail.mixedRealityEnabled), STR_OFF, 0, 1),
+#endif
+
     /* Removed the VR option selection since it is always VR */
 #if 0
 #if !defined(_OS_PSP) && !defined(_OS_PSV) && !defined(_OS_3DS) && !defined(_OS_GCW0)

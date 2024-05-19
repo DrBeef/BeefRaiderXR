@@ -402,6 +402,12 @@ struct vec2 {
         return (int)((angle + 45.f) / 90.f);
     }
 
+    int sector(float sectorCount)  const {
+        float angle = RAD2DEG * atan2f(x, y);
+        if (angle < 0.f) angle += 360.f;
+        return (int)((angle + (180.f / sectorCount)) / (360.f / sectorCount));
+    }
+
     vec2 lerp(const vec2 &v, const float t) const {
         if (t <= 0.0f) return *this;
         if (t >= 1.0f) return v;

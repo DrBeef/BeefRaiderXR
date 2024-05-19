@@ -32,7 +32,7 @@
 #endif
 
 
-enum { ovrMaxLayerCount = 3 };
+enum { ovrMaxLayerCount = 4 };
 enum { ovrMaxNumEyes = 2 };
 
 typedef enum xrButton_ {
