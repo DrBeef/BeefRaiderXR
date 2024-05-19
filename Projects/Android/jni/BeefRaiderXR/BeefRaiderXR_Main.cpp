@@ -800,6 +800,7 @@ int VR_SetRefreshRate(int refreshRate)
 	return 0;
 }
 
+#ifdef ANDROID
 extern "C" {
     bool IsMRMode()
     {
@@ -808,6 +809,7 @@ extern "C" {
             Core::settings.detail.mixedRealityEnabled && !inventory->isActive();
     }
 }
+#endif
 
 //All the stuff we want to do each frame specifically for this game
 void VR_FrameSetup()
@@ -835,11 +837,6 @@ void VR_FrameSetup()
     snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
 
     mat4 head = snapTurnMat * mat4(vrOrientation, vec3(0));
-
-    if (leftTrackedRemoteState_new.Buttons & xrButton_LThumb)
-    {
-        forceUpdatePose = true;
-    }
 
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
 
@@ -890,6 +887,12 @@ void VR_FrameSetup()
         }
 
         prevPos = vrPosition;
+    }
+
+    if (leftTrackedRemoteState_new.Buttons & xrButton_LThumb)
+    {
+        Input::hmd.mrpos = laraPos;
+        forceUpdatePose = true;
     }
 
     if (Input::hmd.zero.x == INF || forceUpdatePose)
@@ -1205,11 +1208,13 @@ void VR_HandleControllerInput() {
 
     Lara *lara = nullptr;
     int laraState = -1;
+    int laraStand = Lara::STAND_GROUND;
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
     if (inventory->game->getLara())
     {
         lara = (Lara*)inventory->game->getLara();
         laraState = lara->state;
+        laraStand = lara->getStand();
         pov = lara->camera->getPointOfView();
 
         //if (pov == ICamera::POV_1ST_PERSON)
@@ -1336,22 +1341,17 @@ void VR_HandleControllerInput() {
         hoppingBack = joy.length() > 0.001f;
     }
     else 
-    if (laraState == Lara::STATE_SWIM ||
-        laraState == Lara::STATE_TREAD ||
-        laraState == Lara::STATE_GLIDE)
+    if (laraStand == Lara::STAND_UNDERWATER)
     {
-        Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
-
         if (pov == ICamera::POV_1ST_PERSON)
         {
             Input::hmd.head.setRot(Input::hmd.body.getRot());
+            Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
         }
         else
         {
-            mat4 m = snapTurnMat;
-            m.rotateX(-PIH / 1.5f);
-            mat4 cR = m * mat4(vrLeftControllerOrientation, vec3(0));
-            Input::hmd.head.setRot(cR.getRot());
+            //Joystick controlled swimming is best
+            Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
         }
     }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
@@ -2122,7 +2122,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     cacheDir[0] = saveDir[0] = contentDir[0] = 0;
 
     strcat(cacheDir, getenv("APPDATA"));
-    strcat(cacheDir, "\\OpenLara\\");
+    strcat(cacheDir, "\\BeefRaiderXR\\");
     strcpy(saveDir, cacheDir);
     CreateDirectory(cacheDir, NULL);
 

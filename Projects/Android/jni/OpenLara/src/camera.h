@@ -234,24 +234,17 @@ struct Camera : ICamera {
             else
             {
                 static float offsetMult = 1.0f;
-                if (pov != POV_3RD_PERSON_VR_TOY_MODE)
+                if (owner->holdingWeapons())
                 {
-                    if (owner->holdingWeapons())
-                    {
-                        offsetMult *= 1.01;
-                    }
-                    else
-                    {
-                        offsetMult *= 0.99f;
-                    }
+                    offsetMult *= 1.03;
                 }
                 else
                 {
-                    offsetMult = 1.f;
+                    offsetMult *= 0.97f;
                 }
                 offsetMult = clamp(offsetMult, 1.f, 2.f);
 
-                povOffset = 384 * pov * (pov == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : 1.0f) * offsetMult;
+                povOffset = 384 * pov * (pov == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : offsetMult);
                 fpHead.pos = owner->getPos();
                 fpHead.pos.y -= 400 + (300 * Input::hmd.extraworldscaler);
                 fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
@@ -713,7 +706,17 @@ struct Camera : ICamera {
         }
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
-            updateListener(mViewInv * Input::hmd.head);
+        {
+            if (getPointOfView() == ICamera::POV_1ST_PERSON)
+            {
+                updateListener(mViewInv* Input::hmd.head);
+            }
+            else
+            {
+                //Hear what Lara hears
+                updateListener(owner->getMatrix());
+            }
+        }
         else
             updateListener(mViewInv);
     }

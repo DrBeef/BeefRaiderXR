@@ -818,7 +818,7 @@ struct Lara : Character {
         if (Core::settings.detail.auto3rdPerson)
         {
             if (camera->mode == ICamera::MODE_CUTSCENE ||
-                state == STATE_DIVE ||
+                state == STATE_SWAN_DIVE ||
                 state == STATE_SWITCH_DOWN ||
                 state == STATE_SWITCH_UP ||
                 state == STATE_PULL_BLOCK ||
@@ -836,6 +836,35 @@ struct Lara : Character {
         }
 
         return camera->getPointOfView(true);
+    }
+
+    virtual mat4 getMatrix() {
+        const TR::Entity& e = getEntity();
+
+        if (level->isCutsceneLevel() && (e.isActor() || e.isLara()) && e.type != TR::Entity::CUT_4)
+            return level->cutMatrix;
+
+        if (!lockMatrix) {
+            matrix.identity();
+            matrix.translate(pos);
+            {
+                //Use body direction for the animated torso
+                vec3 ang = angle;
+                if (getCameraPOV() == ICamera::POV_1ST_PERSON)
+                {
+                    ang = getAngleAbs(Input::hmd.body.dir().xyz());
+                }
+                else if (stand != STAND_UNDERWATER)
+                {
+                    ang = getAngleAbs(Input::hmd.head.dir().xyz());
+                }
+                if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
+            }
+
+            if (angle.x != 0.0f) matrix.rotateX(angle.x);
+            if (angle.z != 0.0f) matrix.rotateZ(angle.z);
+        }
+        return matrix;
     }
 
     void wpnSet(TR::Entity::Type wType) {
@@ -3421,16 +3450,21 @@ struct Lara : Character {
             //(camera->getPointOfView() != ICamera::POV_3RD_PERSON_ORIGINAL) && 
             canFreeRotate()) {
 
+            bool isFirstPerson = camera->getPointOfView() == ICamera::POV_1ST_PERSON;
+
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
-            if (!(input & JUMP) && !inventory->isActive()) {
+            if (!(input & JUMP) && !inventory->isActive() && (isFirstPerson || stand != STAND_UNDERWATER)) {
                 input &= ~(LEFT | RIGHT);
             }
 
             vec3 ang;
             ang = getAngleAbs(Input::hmd.head.dir().xyz());
-            angle.y = ang.y;
+            if (isFirstPerson || stand != STAND_UNDERWATER)
+            {
+                angle.y = ang.y;
+            }
 
-            if (stand == STAND_UNDERWATER) {
+            if (isFirstPerson && stand == STAND_UNDERWATER) {
                 input &= ~(FORTH | BACK);
                 angle.x = ang.x;
             }
