@@ -1245,9 +1245,10 @@ void VR_HandleControllerInput() {
     bool usingSnapTurn = Core::settings.detail.turnmode == 0 ||
         (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON);
 
-    //If swimming allow either joystick to snap/smooth turn you
+    //If swimming allow either joystick to snap/smooth turn you (1st person only)
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
-    if (laraState == Lara::STATE_SWIM)
+    if (laraStand == Lara::STAND_UNDERWATER &&
+        pov == ICamera::POV_1ST_PERSON)
     {
         joystick.x += leftTrackedRemoteState_new.Joystick.x;
     }
