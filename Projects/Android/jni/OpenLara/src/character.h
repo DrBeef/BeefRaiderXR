@@ -239,6 +239,10 @@ struct Character : Controller {
         return getJoint(jointChest).pos;
     }
 
+    virtual TR::Entity::Type getItemHands() {
+        return TR::Entity::NONE;
+    }
+
     virtual void lookAt(Controller *target) {
         if (health <= 0.0f)
             target = NULL;

@@ -889,10 +889,19 @@ void VR_FrameSetup()
         prevPos = vrPosition;
     }
 
+    static bool isTriggerUpdatePose = false;
     if (leftTrackedRemoteState_new.Buttons & xrButton_LThumb)
     {
-        Input::hmd.mrpos = laraPos;
-        forceUpdatePose = true;
+        if (!isTriggerUpdatePose)
+        {
+            Input::hmd.mrpos = laraPos;
+            forceUpdatePose = true;
+            isTriggerUpdatePose = true;
+        }
+    }
+    else
+    {
+        isTriggerUpdatePose = false;
     }
 
     if (Input::hmd.zero.x == INF || forceUpdatePose)
@@ -907,11 +916,23 @@ void VR_FrameSetup()
 
     if (pov == ICamera::POV_1ST_PERSON || forceUpdatePose)
     {
-        Input::hmd.head = head;
-        Input::hmd.body.setRot(head.getRot());
+        if (pov == ICamera::POV_1ST_PERSON)
+        {
+            Input::hmd.head = head;
+            Input::hmd.body.setRot(head.getRot());
+        }
         if (!Core::settings.detail.mixedRealityEnabled)
         {
-            Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+            if (pov != ICamera::POV_1ST_PERSON)
+            {
+                Input::hmd.extrarot = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+                Input::hmd.nextrot = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+                Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+            }
+            else
+            {
+                Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+            }
         }
         vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
         zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
@@ -1327,22 +1348,42 @@ void VR_HandleControllerInput() {
                          rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
     }
 
+
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-    //Remove this hoppping back for now
-    static bool hoppingBack = false;
-    //Allow Lara to hop back if walking is pressed and she's currently stood still
-    if (hoppingBack || 
-        ((laraState == Lara::STATE_STOP ||
-        laraState == Lara::STATE_FAST_BACK) &&
-        joy.quadrant() == 2 &&
-        walkingEnabled))
+    if (Core::settings.detail.mixedRealityEnabled)
+    {
+        joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot * DEG2RAD)
+            - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
+            + Input::hmd.angleY);
+    }
+    else if (pov != ICamera::POV_1ST_PERSON)
+    {
+        joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2 * DEG2RAD) - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
+    }
+    else
+    {
+        joy = vec2(joy.x, -joy.y);
+    }
+
+    int sector = joy.sector(2);
+
+    //Allow Lara to hop back if holding guns
+    if (((laraState == Lara::STATE_STOP ||
+            laraState == Lara::STATE_FAST_BACK) &&
+        (joy.quadrant() == 0) &&
+        (lara && !lara->emptyHands())))
     {
         Input::setJoyPos(joyRight, jkL, vec2(0, 1));
-        walkingEnabled = false;
-        hoppingBack = joy.length() > 0.001f;
     }
-    else 
-    if (laraStand == Lara::STAND_UNDERWATER)
+    //Trigger walking back or side stepping from a stopped position
+    else if ((laraState == Lara::STATE_STOP ||
+            laraState == Lara::STATE_BACK) &&
+        (joy.sector(2) == 0) &&
+        walkingEnabled)
+    {
+        Input::setJoyPos(joyRight, jkL, vec2(0, 1));
+    }
+    else if (laraStand == Lara::STAND_UNDERWATER)
     {
         if (pov == ICamera::POV_1ST_PERSON)
         {
@@ -1363,17 +1404,15 @@ void VR_HandleControllerInput() {
             (laraState == Lara::STATE_STOP ||
               laraState == Lara::STATE_RUN ||
               laraState == Lara::STATE_WALK ||
-              laraState == Lara::STATE_FORWARD_JUMP ||
               laraState == Lara::STATE_SURF_TREAD ||
               laraState == Lara::STATE_SURF_SWIM))
     {
         //deadzone
-        if (joy.length() > 0.2f)
+        if (joy.length() > 0.8f)
         {
             mat4 addMat;
             addMat.identity();
-            float additionalDirAngle =
-                    atan2(joy.x, joy.y);
+            float additionalDirAngle = atan2(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
             addMat.rotateY(-additionalDirAngle);
 
             if (Core::settings.detail.mixedRealityEnabled)
@@ -1382,14 +1421,16 @@ void VR_HandleControllerInput() {
             }
 
             Input::hmd.head.setRot((addMat * Input::hmd.body).getRot());
+
+            Input::setJoyPos(joyRight, jkL, vec2(0, -joy.length()));
         }
-        else if (laraState == Lara::STATE_RUN)
+        else if (laraState == Lara::STATE_RUN ||
+            laraState == Lara::STATE_WALK)
         {
             lara->animation.setAnim(Lara::ANIM_STAND);
             lara->state = Lara::STATE_STOP;
+            Input::setJoyPos(joyRight, jkL, vec2(0));
         }
-
-        Input::setJoyPos(joyRight, jkL, vec2(0, -joy.length()));
     }
     // If the user simply pressed the thumbstick in a particular direction that isn't forward
     // after already executing another move (like jump), then
@@ -1398,7 +1439,8 @@ void VR_HandleControllerInput() {
     {
         //now adjust movement direction based on thumbstick direction
         //deadzone
-        if (joy.length() > 0.2f)
+        vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+        if (joy.length() > 0.5f)
         {
             //Calculate which quandrant the thumbstick is pushed (UP/RIGHT/DOWN/LEFT) like a D pad
             float angle = joy.quadrant() * 90.f;
@@ -1464,7 +1506,8 @@ void VR_HandleControllerInput() {
                                               rightTrackedRemoteState_new.IndexTrigger) > 0.4f ? 1 : 0);
 
             //Walk
-            Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+            Input::setDown(ikShift, walkingEnabled & 1);
+
         }
         else
         {
@@ -1486,7 +1529,9 @@ void VR_HandleControllerInput() {
                     else */
             {
                 //Walk
-                Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
+                Input::setDown(ikShift, walkingEnabled & 1);
+                //Input::hmd.state[cWalk] = walkingEnabled;
+                //Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
             }
         }
 

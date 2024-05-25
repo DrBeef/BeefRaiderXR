@@ -367,6 +367,7 @@ const char *STR_RU[] = { ""
         , "1st Person IK Body"
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
+        , "Draw Detailed Sky"
 };
 
 inline bool isCyrillic(char c) {

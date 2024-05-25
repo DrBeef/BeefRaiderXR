@@ -605,6 +605,7 @@ const char *STR_JA[] = { "\x11\x02\x70\x01\x97\x01\xD6\xFF\xFF"
         , "1st Person IK Body"
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
+        , "Draw Detailed Sky"
 };
 
 #endif

@@ -296,12 +296,14 @@ namespace Game {
         if (!level->level.isCutsceneLevel())
             delta = min(0.2f, delta);
 
+        Core::firstTick = true;
         while (delta > EPS) {
             Core::deltaTime = min(delta, 1.0f / 30.0f);
             Game::updateTick();
             delta -= Core::deltaTime;
             if (Core::resetState) // resetTime was called
                 break;
+            Core::firstTick = false;
         }
 
         return true;

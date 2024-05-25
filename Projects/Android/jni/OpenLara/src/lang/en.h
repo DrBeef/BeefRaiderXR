@@ -363,6 +363,7 @@ const char *STR_EN[] = { ""
         , "1st Person IK Body"
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
+        , "Draw Detailed Sky"
 };
 
 #endif

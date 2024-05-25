@@ -397,15 +397,23 @@ struct vec2 {
     vec2& rotate(float angle)    { vec2 cs; sincos(angle, &cs.y, &cs.x); return rotate(cs); }
 
     int quadrant()  const {
+        if (length() < 0.01f)
+        {
+            return -1;
+        }
         float angle = RAD2DEG * atan2f(x, y);
         if (angle < 0.f) angle += 360.f;
-        return (int)((angle + 45.f) / 90.f);
+        return ((int)((angle + 45.f) / 90.f)) % 4;
     }
 
     int sector(float sectorCount)  const {
+        if (length() < 0.01f)
+        {
+            return -1;
+        }
         float angle = RAD2DEG * atan2f(x, y);
         if (angle < 0.f) angle += 360.f;
-        return (int)((angle + (180.f / sectorCount)) / (360.f / sectorCount));
+        return ((int)((angle + (180.f / sectorCount)) / (360.f / sectorCount))) % (int)sectorCount;
     }
 
     vec2 lerp(const vec2 &v, const float t) const {

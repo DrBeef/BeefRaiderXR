@@ -10,6 +10,8 @@
 
 #define MAX_SHOT_DIST   (64 * 1024)
 
+#define TARGET_DIST_CLOSE (1024 * 2)
+
 struct Enemy : Character {
 
     struct Path {
@@ -45,9 +47,9 @@ struct Enemy : Character {
             return true;
         }
     };
-
+     
     enum AI {
-        AI_FIXED, AI_RANDOM
+        AI_FIXED, AI_AGGRESSSIVE, AI_RANDOM
     } ai;
 
     enum Mood {
@@ -76,7 +78,7 @@ struct Enemy : Character {
     bool  targetFromView;   // enemy in target view zone
     bool  targetCanAttack;
 
-    Enemy(IGame *game, int entity, float health, int radius, float length, float aggression) : Character(game, entity, health), ai(AI_RANDOM), mood(MOOD_SLEEP), wound(false), nextState(0), targetBox(TR::NO_BOX), thinkTime(1.0f / 30.0f), length(length), aggression(aggression), radius(radius), hitSound(-1), target(NULL), path(NULL) {
+    Enemy(IGame *game, int entity, float health, int radius, float length, float aggression) : Character(game, entity, health), ai(AI_AGGRESSSIVE), mood(MOOD_SLEEP), wound(false), nextState(0), targetBox(TR::NO_BOX), thinkTime(1.0f / 30.0f), length(length), aggression(aggression), radius(radius), hitSound(-1), target(NULL), path(NULL) {
         targetDist   = +INF;
         targetInView = targetFromView = targetCanAttack = false;
         waypoint     = pos;
@@ -300,7 +302,7 @@ struct Enemy : Character {
         bool inZone = zone == target->zone;
 
         if (mood == MOOD_SLEEP || mood == MOOD_STALK)
-            return inZone ? MOOD_ATTACK : (wound ? MOOD_ESCAPE : mood);
+            return inZone ? MOOD_ATTACK : ((wound && ai != AI_AGGRESSSIVE) ? MOOD_ESCAPE : mood);
         
         if (mood == MOOD_ATTACK)
             return inZone ? mood : MOOD_SLEEP;
@@ -344,7 +346,7 @@ struct Enemy : Character {
         targetDist      = targetVec.length();
         targetAngle     = clampAngle(atan2f(targetVec.x, targetVec.z) - angle.y);
         targetDead      = target->health <= 0;
-        targetInView    = targetVec.dot(getDir()) > 0;
+        targetInView    = targetVec.dot(getDir()) > 0 || (targetDist < TARGET_DIST_CLOSE);
         targetFromView  = targetVec.dot(target->getDir()) < 0;
         targetCanAttack = targetInView && fabsf(targetVec.y) <= 256.0f;
 
@@ -362,7 +364,7 @@ struct Enemy : Character {
             targetBox = TR::NO_BOX;
         }
 
-        mood = target->health <= 0 ? MOOD_SLEEP : (ai == AI_FIXED ? getMoodFixed() : getMoodRandom());
+        mood = target->health <= 0 ? MOOD_SLEEP : (ai <= AI_AGGRESSSIVE ? getMoodFixed() : getMoodRandom());
 
     // set behavior and target
         int box;

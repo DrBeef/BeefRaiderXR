@@ -2536,7 +2536,9 @@ struct Level : IGame {
     void renderOpaque(RoomDesc *roomsList, int roomsCount) {
         renderRooms(roomsList, roomsCount, 0);
         renderEntities(0);
-        if (Core::pass != Core::passShadow && skyIsVisible) {
+        if (Core::pass != Core::passShadow && skyIsVisible &&
+            !Core::settings.detail.mixedRealityEnabled &&
+            Core::settings.detail.sky) {
             renderSky();
         }
     }

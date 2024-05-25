@@ -234,7 +234,7 @@ struct Camera : ICamera {
             else
             {
                 static float offsetMult = 1.0f;
-                if (owner->holdingWeapons())
+                if (owner->getItemHands() != TR::Entity::NONE)
                 {
                     offsetMult *= 1.03;
                 }
@@ -447,8 +447,8 @@ struct Camera : ICamera {
 
     virtual void update() {
         if (shake > 0.0f) {
-            shake = max(0.0f, shake - Core::deltaTime);
-            Input::setJoyVibration(cameraIndex,  clamp(shake, 0.0f, 1.0f), 0);
+            shake = clamp(max(0.0f, shake - Core::deltaTime), 0.0f, 1.0f);
+            Input::setJoyVibration(cameraIndex, shake, shake);
         }
 
         if (mode == MODE_FOLLOW) {

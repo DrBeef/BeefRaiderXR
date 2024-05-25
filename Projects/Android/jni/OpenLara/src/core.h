@@ -291,6 +291,7 @@ namespace Core {
                     uint8 lighting;
                     uint8 shadows;
                     uint8 water;
+                    uint8 sky;
                 };
                 uint8 quality[4];
             };
@@ -653,6 +654,8 @@ namespace Core {
     
     int32   renderState;
 
+    bool firstTick;
+
     struct Active {
         const PSO     *pso;
         GAPI::Shader  *shader;
@@ -891,6 +894,7 @@ namespace Core {
         settings.detail.vsync        = true;
         settings.detail.stereo       = Settings::STEREO_VR;
         settings.detail.scale        = Settings::SCALE_100;
+        settings.detail.sky          = true;
 
         settings.detail.braid = 1;
         settings.detail.handedness = 0;
