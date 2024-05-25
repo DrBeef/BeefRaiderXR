@@ -1240,13 +1240,22 @@ void VR_HandleControllerInput() {
     Lara *lara = nullptr;
     int laraState = -1;
     int laraStand = Lara::STAND_GROUND;
+    int laraAnim = Lara::ANIM_STAND;
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
+    bool actionPressed = false;
     if (inventory->game->getLara())
     {
         lara = (Lara*)inventory->game->getLara();
         laraState = lara->state;
         laraStand = lara->getStand();
         pov = lara->camera->getPointOfView();
+
+        if (lara->emptyHands())
+        {
+            //with empty hands left or right trigger is action
+            actionPressed = (leftTrackedRemoteState_new.IndexTrigger +
+                rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
+        }
 
         //if (pov == ICamera::POV_1ST_PERSON)
         {
@@ -1269,6 +1278,34 @@ void VR_HandleControllerInput() {
             else
             {
                 reversed = false;
+            }
+        }
+
+        if (pov != ICamera::POV_1ST_PERSON)
+        {
+            const int grabcount = 25;
+            static int spingrab = 0;
+            if (lara->animation.index == Lara::ANIM_FALL_FORTH &&
+                laraStand == Lara::STAND_AIR &&
+                laraState == Lara::STATE_FORWARD_JUMP &&
+                spingrab == 0 &&
+                actionPressed)
+            {
+                spingrab = grabcount + 1;
+                lara->velocity /= vec3(20.0f);
+            }
+
+            if (spingrab > 1)
+            {
+                lara->angle.y -= PI / grabcount;
+                Input::hmd.head.rotateY(PI / grabcount);
+                spingrab--;
+            }
+
+            //Reset once Lara isn't in the air
+            if (laraStand != Lara::STAND_AIR)
+            {
+                spingrab = 0;
             }
         }
     }
@@ -1349,14 +1386,6 @@ void VR_HandleControllerInput() {
     int joyLeft = 1;
 
     bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
-
-    bool actionPressed = false;
-    if (!lara || lara->emptyHands())
-    {
-        //with empty hands left or right trigger is action
-        actionPressed = (leftTrackedRemoteState_new.IndexTrigger +
-                         rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
-    }
 
 
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
@@ -1439,6 +1468,10 @@ void VR_HandleControllerInput() {
         {
             lara->animation.setAnim(Lara::ANIM_STAND);
             lara->state = Lara::STATE_STOP;
+            Input::setJoyPos(joyRight, jkL, vec2(0));
+        }
+        else if (laraState == Lara::STATE_STOP)
+        {
             Input::setJoyPos(joyRight, jkL, vec2(0));
         }
     }
@@ -1582,7 +1615,9 @@ void VR_HandleControllerInput() {
         }
     }
 
-    //World orientation in mixed reality mode
+    /*
+        World orientation in mixed reality mode
+    */
     if (Core::settings.detail.mixedRealityEnabled)
     {
         // easier just dumping these here as statics than creating member variables
