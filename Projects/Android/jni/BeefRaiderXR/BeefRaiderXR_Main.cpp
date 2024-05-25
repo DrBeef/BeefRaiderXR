@@ -843,6 +843,8 @@ void VR_FrameSetup()
     //6DOF calculation
     Lara *lara = nullptr;
     vec3 laraPos;
+    int laraStand = Lara::STAND_GROUND;
+    float laraAngleY = 0.f;
     if (!inventory->isActive() &&
         inventory->game->getLara())
     {
@@ -851,6 +853,8 @@ void VR_FrameSetup()
 
         pov = lara->camera->getPointOfView();
         laraPos = lara->getPos();
+        laraStand = lara->stand;
+        laraAngleY = lara->angle.y;
 
         //Reset here, if we don't then it can break things otherwise
         lara->velocity_6dof = vec2(0.f);
@@ -923,15 +927,21 @@ void VR_FrameSetup()
         }
         if (!Core::settings.detail.mixedRealityEnabled)
         {
+            float angleY = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
             if (pov != ICamera::POV_1ST_PERSON)
             {
-                Input::hmd.extrarot = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
-                Input::hmd.nextrot = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
-                Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+                if (laraStand == Lara::STAND_UNDERWATER)
+                {
+                    angleY = -laraAngleY * RAD2DEG;
+                }
+
+                Input::hmd.extrarot = angleY;
+                Input::hmd.nextrot = angleY;
+                Input::hmd.extrarot2 = angleY;
             }
             else
             {
-                Input::hmd.extrarot2 = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+                Input::hmd.extrarot2 = angleY;
             }
         }
         vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);

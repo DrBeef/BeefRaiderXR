@@ -707,7 +707,7 @@ struct Camera : ICamera {
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
         {
-            if (getPointOfView() == ICamera::POV_1ST_PERSON)
+            if (!Core::settings.detail.mixedRealityEnabled)
             {
                 updateListener(mViewInv* Input::hmd.head);
             }
