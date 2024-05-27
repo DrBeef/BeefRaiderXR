@@ -114,6 +114,7 @@ struct Lara : Character {
 
         ANIM_FALL_BACK          = 93,
 
+        ANIM_REACH              = 95,
         ANIM_HANG               = 96,
 
         ANIM_STAND_NORMAL       = 103,
@@ -860,7 +861,6 @@ struct Lara : Character {
                 }
                 if (ang.y != 0.0f) matrix.rotateY(ang.y - (animation.anims != NULL ? (animation.rot * animation.delta) : 0.0f));
             }
-
             if (angle.x != 0.0f) matrix.rotateX(angle.x);
             if (angle.z != 0.0f) matrix.rotateZ(angle.z);
         }

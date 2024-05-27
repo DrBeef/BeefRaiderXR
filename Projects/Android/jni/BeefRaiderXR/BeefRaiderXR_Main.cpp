@@ -1239,25 +1239,32 @@ void VR_HandleControllerInput() {
 
     Lara *lara = nullptr;
     int laraState = -1;
-    int laraStand = Lara::STAND_GROUND;
-    int laraAnim = Lara::ANIM_STAND;
+    int laraStand = -1;
+    int laraAnim = -1;
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
     bool actionPressed = false;
+    bool usingSnapTurn = true;
     if (inventory->game->getLara())
     {
         lara = (Lara*)inventory->game->getLara();
         laraState = lara->state;
         laraStand = lara->getStand();
         pov = lara->camera->getPointOfView();
+        static int spingrab = 0;
 
+        usingSnapTurn = Core::settings.detail.turnmode == 0 ||
+            (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON);
+
+        //with empty hands left or right trigger is action
         if (lara->emptyHands())
         {
-            //with empty hands left or right trigger is action
             actionPressed = (leftTrackedRemoteState_new.IndexTrigger +
-                rightTrackedRemoteState_new.IndexTrigger) > 0.4f;
+                rightTrackedRemoteState_new.IndexTrigger) > 0.5f;
         }
 
-        //if (pov == ICamera::POV_1ST_PERSON)
+        /*
+        * Roll Reverse Direction
+        */
         {
             static bool reversed = false;
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)
@@ -1274,6 +1281,9 @@ void VR_HandleControllerInput() {
                     }
                     reversed = true;
                 }
+
+                //prevent spinggrab from starting if we go over an edge
+                spingrab = 1;
             }
             else
             {
@@ -1281,10 +1291,11 @@ void VR_HandleControllerInput() {
             }
         }
 
-        if (pov != ICamera::POV_1ST_PERSON)
+        /*
+        * Remaster style - spin grab (run off ledge with action pressed and Lara will spin and grab ledge)
+        */
         {
-            const int grabcount = 25;
-            static int spingrab = 0;
+            const int grabcount = 26;
             if (lara->animation.index == Lara::ANIM_FALL_FORTH &&
                 laraStand == Lara::STAND_AIR &&
                 laraState == Lara::STATE_FORWARD_JUMP &&
@@ -1297,21 +1308,38 @@ void VR_HandleControllerInput() {
 
             if (spingrab > 1)
             {
-                lara->angle.y -= PI / grabcount;
-                Input::hmd.head.rotateY(PI / grabcount);
+                if (pov == ICamera::POV_1ST_PERSON && usingSnapTurn)
+                {
+                    if (spingrab == (grabcount / 2))
+                    {
+                        Input::hmd.nextrot += PI;
+                        lara->angle.y -= PI;
+                        Input::hmd.head.rotateY(-PI);
+                    }
+                }
+                else
+                {
+                    float angle = PI / grabcount;
+                    if (pov == ICamera::POV_1ST_PERSON)
+                    {
+                        Input::hmd.nextrot += angle * RAD2DEG;
+                    }
+
+                    lara->angle.y -= angle;
+                    Input::hmd.head.rotateY(-angle);
+                }
+
                 spingrab--;
             }
 
             //Reset once Lara isn't in the air
-            if (laraStand != Lara::STAND_AIR)
+            if (laraStand == Lara::STAND_GROUND &&
+                laraState == Lara::STATE_STOP)
             {
                 spingrab = 0;
             }
         }
     }
-
-    bool usingSnapTurn = Core::settings.detail.turnmode == 0 ||
-        (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON);
 
     //If swimming allow either joystick to snap/smooth turn you (1st person only)
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
@@ -1545,8 +1573,7 @@ void VR_HandleControllerInput() {
         if (lara->emptyHands())
         {
             //with empty hands left or right trigger is action
-            Input::setJoyDown(joyRight, jkA, (leftTrackedRemoteState_new.IndexTrigger +
-                                              rightTrackedRemoteState_new.IndexTrigger) > 0.4f ? 1 : 0);
+            Input::setJoyDown(joyRight, jkA, actionPressed);
 
             //Walk
             Input::setDown(ikShift, walkingEnabled & 1);

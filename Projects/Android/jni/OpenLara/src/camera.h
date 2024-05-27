@@ -278,16 +278,15 @@ struct Camera : ICamera {
 
         
         //Now we make sure we don't clip through anything
-        vec3 opos = owner->pos;
-        opos.y = fpHead.pos.y;
-        TR::Location from, to;
-        from.room = getRoomIndex();
-        from.pos = opos;
+        TR::Location to;
         to.pos = fpHead.pos;
+        to.room = getRoomIndex();
 
         if (getPointOfView() == POV_3RD_PERSON_VR_1 || getPointOfView() == POV_3RD_PERSON_VR_2)
         {
-            owner->trace(from, to);
+            target.room = owner->getRoomIndex();
+            target.pos = getViewPoint();
+            traceClip(povOffset, to, false);
         }        
 
         mViewInv.identity();
@@ -337,7 +336,7 @@ struct Camera : ICamera {
             *toX = targetX - sqrtf(offset - sqBox.minZ) * sign(box.minX - box.maxX);
     }
 
-    void traceClip(float offset, TR::Location &to) {
+    void traceClip(float offset, TR::Location &to, bool clipSide = true) {
         owner->trace(target, to);
 
         uint16 ownerBoxIndex  = level->getSector(target.room, target.pos)->boxIndex;
@@ -375,7 +374,10 @@ struct Camera : ICamera {
         if (*toZ > targetZ)
             swap(cBox.minZ, cBox.maxZ);
 
-        clipSlide(offset, toX, toZ, targetX, targetZ, cBox);
+        if (clipSide)
+        {
+            clipSlide(offset, toX, toZ, targetX, targetZ, cBox);
+        }
         level->getSector(to.room, to.pos);
     }
 
