@@ -1741,8 +1741,8 @@ struct Rex : Enemy {
 #define RAPTOR_DIST_BITE        680
 #define RAPTOR_DIST_ATTACK      (1024 + 512)
 
-#define RAPTOR_TURN_FAST        (DEG2RAD * 120)
-#define RAPTOR_TURN_SLOW        (DEG2RAD * 30)
+#define RAPTOR_TURN_FAST        (DEG2RAD * 130)
+#define RAPTOR_TURN_SLOW        (DEG2RAD * 60)
 
 struct Raptor : Enemy {
 

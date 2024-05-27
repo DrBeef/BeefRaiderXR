@@ -54,6 +54,7 @@ namespace Input {
         mat4 proj[2];
         mat4 controllers[2];
         vec3 zero;
+        bool forceUpdatePose;
         bool ready;
         bool state[cMAX];
 

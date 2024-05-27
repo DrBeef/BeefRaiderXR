@@ -89,6 +89,11 @@ struct Camera : ICamera {
         } else
             mode = MODE_FOLLOW;
 
+        //Must initialise these in order to fix the shadows on level start
+        fov   = 90.0f;
+        znear = 16.0f;
+        zfar  = 45.0f * 1024.0f;
+
         eye.pos     = owner->pos;
         eye.room    = owner->getRoomIndex();
         target.pos  = owner->pos;
@@ -806,6 +811,8 @@ struct Camera : ICamera {
     void changeView(bool increase) {
 
         this->pointOfViewIndex += increase ? 1 : -1;
+
+        Input::hmd.forceUpdatePose = true;
 
         fov   = 90.0f;
         znear = 16.0f;

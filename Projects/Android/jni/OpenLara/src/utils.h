@@ -77,6 +77,7 @@
 #define EPS     FLT_EPSILON
 #define INF     INFINITY
 #define PI      3.14159265358979323846f
+#define PIQ     (PI * 0.25f)
 #define PIH     (PI * 0.5f)
 #define PI2     (PI * 2.0f)
 #define DEG2RAD (PI / 180.0f)

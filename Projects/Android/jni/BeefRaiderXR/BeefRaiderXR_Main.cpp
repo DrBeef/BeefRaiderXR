@@ -726,8 +726,6 @@ void VR_SetHMDPosition(float x, float y, float z )
 {
 }
 
-static bool forceUpdatePose = false;
-
 void VR_Init()
 {	
 #ifndef ANDROID
@@ -761,7 +759,7 @@ void VR_Init()
     Core::eyeTex[0] = new Texture(eyeW, eyeH, 1, TexFormat::FMT_RGBA, OPT_TARGET);
     Core::eyeTex[1] = new Texture(eyeW, eyeH, 1, TexFormat::FMT_RGBA, OPT_TARGET);
 
-    forceUpdatePose = true;
+    Input::hmd.forceUpdatePose = true;
 }
 
 
@@ -834,7 +832,7 @@ void VR_FrameSetup()
 
     mat4 snapTurnMat;
     snapTurnMat.identity();
-    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
+    snapTurnMat.rotateY(Input::hmd.extrarot);
 
     mat4 head = snapTurnMat * mat4(vrOrientation, vec3(0));
 
@@ -880,7 +878,7 @@ void VR_FrameSetup()
                     lara->velocity_6dof.x = (vrPosition - prevPos).x;
                     lara->velocity_6dof.z = -(vrPosition - prevPos).z;
                     lara->velocity_6dof *= 1000;
-                    lara->velocity_6dof = lara->velocity_6dof.rotateY(DEG2RAD * Input::hmd.extrarot);
+                    lara->velocity_6dof = lara->velocity_6dof.rotateY(Input::hmd.extrarot);
                 }
             }
             else
@@ -899,7 +897,7 @@ void VR_FrameSetup()
         if (!isTriggerUpdatePose)
         {
             Input::hmd.mrpos = laraPos;
-            forceUpdatePose = true;
+            Input::hmd.forceUpdatePose = true;
             isTriggerUpdatePose = true;
         }
     }
@@ -908,7 +906,7 @@ void VR_FrameSetup()
         isTriggerUpdatePose = false;
     }
 
-    if (Input::hmd.zero.x == INF || forceUpdatePose)
+    if (Input::hmd.zero.x == INF || Input::hmd.forceUpdatePose)
     {
         Input::hmd.mrorg = Input::hmd.mrpos;
         Input::hmd.zero = vrPosition;
@@ -918,7 +916,7 @@ void VR_FrameSetup()
 
     Input::hmd.angleY = Controller::getAngleAbs(mat4(vrOrientation, vec3(0)).dir().xyz()).y;
 
-    if (pov == ICamera::POV_1ST_PERSON || forceUpdatePose)
+    if (pov == ICamera::POV_1ST_PERSON || Input::hmd.forceUpdatePose)
     {
         if (pov == ICamera::POV_1ST_PERSON)
         {
@@ -927,16 +925,16 @@ void VR_FrameSetup()
         }
         if (!Core::settings.detail.mixedRealityEnabled)
         {
-            float angleY = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y * RAD2DEG);
+            float angleY = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
             if (pov != ICamera::POV_1ST_PERSON)
             {
                 if (laraStand == Lara::STAND_UNDERWATER)
                 {
-                    angleY = -laraAngleY * RAD2DEG;
+                    angleY = -laraAngleY;
                 }
 
-                Input::hmd.extrarot = angleY;
-                Input::hmd.nextrot = angleY;
+                Input::hmd.extrarot = angleY + Input::hmd.angleY;
+                Input::hmd.nextrot = angleY + Input::hmd.angleY;
                 Input::hmd.extrarot2 = angleY;
             }
             else
@@ -944,17 +942,17 @@ void VR_FrameSetup()
                 Input::hmd.extrarot2 = angleY;
             }
         }
-        vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
-        zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
+        vrPosition = vrPosition.rotateY(-Input::hmd.extrarot);
+        zero = zero.rotateY(-Input::hmd.extrarot);
     }
     else
     {
         mat4 m;
         m.identity();
-        m.rotateY(DEG2RAD * Input::hmd.extrarot2);
+        m.rotateY(Input::hmd.extrarot2);
         Input::hmd.body.setRot(m.getRot());
-        vrPosition = vrPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
-        zero = zero.rotateY(-DEG2RAD * Input::hmd.extrarot);
+        vrPosition = vrPosition.rotateY(-Input::hmd.extrarot);
+        zero = zero.rotateY(-Input::hmd.extrarot);
     }
 
     Input::hmd.head.setPos(vrPosition);
@@ -973,7 +971,7 @@ void VR_FrameSetup()
     Input::hmd.setView(pL, pR, vL, vR);
 
     //Reset this flag if it was set
-    forceUpdatePose = false;
+    Input::hmd.forceUpdatePose = false;
 }
 
 
@@ -1234,7 +1232,7 @@ void VR_HandleControllerInput() {
 
     mat4 snapTurnMat;
     snapTurnMat.identity();
-    snapTurnMat.rotateY(DEG2RAD * Input::hmd.extrarot);
+    snapTurnMat.rotateY(Input::hmd.extrarot);
     vec3 zero = Input::hmd.head.getPos();
 
     Lara *lara = nullptr;
@@ -1272,13 +1270,17 @@ void VR_HandleControllerInput() {
                 if (!reversed &&
                     lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
                 {
-                    Input::hmd.nextrot += 180.f;
-
                     //Ensure Lara rotates so she can ledge grab
                     if (pov != ICamera::POV_1ST_PERSON)
                     {
                         Input::hmd.head.rotateY(PI);
                     }
+
+                    if (!Core::settings.detail.mixedRealityEnabled)
+                    {
+                        Input::hmd.nextrot += PI;
+                    }
+
                     reversed = true;
                 }
 
@@ -1322,7 +1324,7 @@ void VR_HandleControllerInput() {
                     float angle = PI / grabcount;
                     if (pov == ICamera::POV_1ST_PERSON)
                     {
-                        Input::hmd.nextrot += angle * RAD2DEG;
+                        Input::hmd.nextrot += angle;
                     }
 
                     lara->angle.y -= angle;
@@ -1364,14 +1366,14 @@ void VR_HandleControllerInput() {
             {
                 if (snap && (sect==2|| sect==6))
                 {
-                    Input::hmd.nextrot += (sect == 2) ? -45.f : 45.f;
-                    if (Input::hmd.nextrot < -180.0f)
+                    Input::hmd.nextrot += (sect == 2) ? -PIQ : PIQ;
+                    if (Input::hmd.nextrot < -PI)
                     {
-                        Input::hmd.nextrot += 360.f;
+                        Input::hmd.nextrot += PI2;
                     }
-                    if (Input::hmd.nextrot > 180.0f)
+                    if (Input::hmd.nextrot > PI)
                     {
-                        Input::hmd.nextrot -= 360.f;
+                        Input::hmd.nextrot -= PI2;
                     }
                     snap = false;
                 }
@@ -1384,10 +1386,14 @@ void VR_HandleControllerInput() {
         else if (rjoy.length() > 0.5f && (sect == 2 || sect == 6)) //smooth turn
         {
             int speed = Core::settings.detail.turnmode == 1 ? 1 : (Core::settings.detail.turnmode - 1);
-            Input::hmd.nextrot -= (speed * joystick.x);
-            if (Input::hmd.nextrot > 180.0f)
+            Input::hmd.nextrot -= ((speed * joystick.x) * DEG2RAD);
+            if (Input::hmd.nextrot > PI)
             {
-                Input::hmd.nextrot -= 360.f;
+                Input::hmd.nextrot -= PI2;
+            }
+            if (Input::hmd.nextrot < -PI)
+            {
+                Input::hmd.nextrot += PI2;
             }
         }
     }
@@ -1401,13 +1407,13 @@ void VR_HandleControllerInput() {
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
     if (Core::settings.detail.mixedRealityEnabled)
     {
-        joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot * DEG2RAD)
+        joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot)
             - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
             + Input::hmd.angleY);
     }
     else if (pov != ICamera::POV_1ST_PERSON)
     {
-        joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2 * DEG2RAD) - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
+        joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
     }
     else
     {
@@ -1502,13 +1508,13 @@ void VR_HandleControllerInput() {
 
             if (Core::settings.detail.mixedRealityEnabled)
             {
-                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot * DEG2RAD)
+                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot)
                 -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
                  +Input::hmd.angleY));
             }
             else if (pov != ICamera::POV_1ST_PERSON)
             {
-                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2 * DEG2RAD) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
+                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
             }
             else
             {
@@ -1621,6 +1627,7 @@ void VR_HandleControllerInput() {
                 rightTrackedRemoteState_old.GripTrigger > 0.4f))
         {
             inventory->toggle(0, Inventory::PAGE_INVENTORY);
+            Input::hmd.forceUpdatePose = true;
         }
     }
 
@@ -1648,7 +1655,7 @@ void VR_HandleControllerInput() {
 
                 vec3 anchor;
                 anchor = (vrLeftControllerPosition + vrRightControllerPosition) / 2.0f;
-                anchor = anchor.rotateY((-Input::hmd.extrarot * DEG2RAD));
+                anchor = anchor.rotateY((-Input::hmd.extrarot));
                 anchor = Input::hmd.head.getPos() - anchor;
                 anchor *= ONE_METER * Input::hmd.extraworldscaler;
                 anchor.y = 0;
@@ -1656,7 +1663,7 @@ void VR_HandleControllerInput() {
                 Input::hmd.mranchor = anchor;
 
                 //Reset the origins
-                forceUpdatePose = true;
+                Input::hmd.forceUpdatePose = true;
 
                 snap = true;
             }
@@ -1677,11 +1684,11 @@ void VR_HandleControllerInput() {
                 //World orienting bit..
                 float angle = ((left - right).angleY() - (vrLeftControllerPosition - vrRightControllerPosition).angleY());
                 angleY -= angle;
-                Input::hmd.nextrot -= RAD2DEG * angle;
+                Input::hmd.nextrot -= angle;
 
                 vec3 poschange;
                 poschange = (((left + right) / 2.0f) - ((vrLeftControllerPosition + vrRightControllerPosition) / 2.0f)) * ONE_METER * Input::hmd.extraworldscaler;
-                poschange = poschange.rotateY((-Input::hmd.extrarot * DEG2RAD));
+                poschange = poschange.rotateY((-Input::hmd.extrarot));
                 poschange.x *= -1;
                 Input::hmd.mrorg -= poschange;
 
@@ -1716,11 +1723,13 @@ void VR_HandleControllerInput() {
                 inventory->quicksave = true;
                 inventory->toggle(0, Inventory::PAGE_SAVEGAME);
                 allowSaveLoad = false;
+                Input::hmd.forceUpdatePose = true;
             }
             else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
             {
                 inventory->toggle(0, Inventory::PAGE_OPTION, TR::Entity::INV_PASSPORT);
                 allowSaveLoad = false;
+                Input::hmd.forceUpdatePose = true;
             }
         }
     }
@@ -1732,31 +1741,22 @@ void VR_HandleControllerInput() {
         static bool allowTogglePerspective = false;
         if (!allowTogglePerspective)
         {
-            if (rightJoy.length() < 0.6)
+            if (rightJoy.length() < 0.6f)
             {
                 allowTogglePerspective = true;
             }
         }
         else
         {
-            if (rightJoy.length() > 0.7)
+            if (rightJoy.length() > 0.7f)
             {
-                bool switched = false;
                 if (sector == 4)
                 {
                     lara->camera->changeView(true);
-                    switched = true;
                 }
                 else if (sector == 0)
                 {
                     lara->camera->changeView(false);
-                    switched = true;
-                }
-
-                //If switching to 3rd person force reset of position
-                if (switched && lara->camera->getPointOfView() == ICamera::POV_3RD_PERSON_VR_1)
-                {
-                    forceUpdatePose = true;
                 }
 
                 allowTogglePerspective = false;
@@ -1828,8 +1828,8 @@ void VR_HandleControllerInput() {
         rotation += -33.6718750f;
     }
 
-    vrRightControllerPosition = vrRightControllerPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
-    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-DEG2RAD * Input::hmd.extrarot);
+    vrRightControllerPosition = vrRightControllerPosition.rotateY(-Input::hmd.extrarot);
+    vrLeftControllerPosition = vrLeftControllerPosition.rotateY(-Input::hmd.extrarot);
 
     if (twoHandShotgun)
     {

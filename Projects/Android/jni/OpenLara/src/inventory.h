@@ -1934,9 +1934,8 @@ struct Inventory {
             {
                 mat4 h;
                 h.identity();
-                vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
-                h.rotateY(-ang.y);
-                h.setPos(Input::hmd.body.getPos());
+                h.rotateY(Input::hmd.extrarot - Input::hmd.angleY);
+                h.setPos(vec3(0));
                 head = h.inverseOrtho();
             }
             vec3 pos = vec3(0, -256, -4096);
@@ -2078,8 +2077,7 @@ struct Inventory {
             {
                 mat4 h;
                 h.identity();
-                vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
-                h.rotateY(-ang.y);
+                h.rotateY(Input::hmd.extrarot - Input::hmd.angleY);
                 h.setPos(Input::hmd.body.getPos());
                 head = h.inverseOrtho();
             }
