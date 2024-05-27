@@ -1349,63 +1349,45 @@ void VR_HandleControllerInput() {
         joystick.x += leftTrackedRemoteState_new.Joystick.x;
     }
 
-    if (!inventory->isActive() && laraState != Lara::STATE_DEATH &&
+    if (!inventory->isActive() && 
+        laraState != Lara::STATE_DEATH &&
         laraState != Lara::STATE_PULL_BLOCK &&
         laraState != Lara::STATE_PUSH_BLOCK
         && !Core::settings.detail.mixedRealityEnabled)
     {
-        static int increaseSnap = true;
+        vec2 rjoy(joystick.x, joystick.y);
+        int sect = rjoy.sector(8);
+        if (usingSnapTurn)
         {
-            if (usingSnapTurn)
+            static int snap = true;
+            if (rjoy.length() > 0.7f)
             {
-                if (joystick.x > 0.7f)
+                if (snap && (sect==2|| sect==6))
                 {
-                    if (increaseSnap)
+                    Input::hmd.nextrot += (sect == 2) ? -45.f : 45.f;
+                    if (Input::hmd.nextrot < -180.0f)
                     {
-                        Input::hmd.nextrot -= 45.f;
-                        increaseSnap = false;
-                        if (Input::hmd.nextrot < -180.0f)
-                        {
-                            Input::hmd.nextrot += 360.f;
-                        }
+                        Input::hmd.nextrot += 360.f;
                     }
-                }
-                else if (joystick.x < 0.3f)
-                {
-                    increaseSnap = true;
+                    if (Input::hmd.nextrot > 180.0f)
+                    {
+                        Input::hmd.nextrot -= 360.f;
+                    }
+                    snap = false;
                 }
             }
-
-            static int decreaseSnap = true;
-            if (usingSnapTurn)
+            else if (rjoy.length() < 0.3f)
             {
-                if (joystick.x < -0.7f)
-                {
-                    if (decreaseSnap)
-                    {
-                        Input::hmd.nextrot += 45.f;
-                        decreaseSnap = false;
-
-                        if (Input::hmd.nextrot > 180.0f)
-                        {
-                            Input::hmd.nextrot -= 360.f;
-                        }
-                    }
-                }
-                else if (joystick.x > -0.3f)
-                {
-                    decreaseSnap = true;
-                }
+                snap = true;
             }
-
-            if (!usingSnapTurn && fabs(joystick.x) > 0.1f) //smooth turn
+        }
+        else if (rjoy.length() > 0.5f && (sect == 2 || sect == 6)) //smooth turn
+        {
+            int speed = Core::settings.detail.turnmode == 1 ? 1 : (Core::settings.detail.turnmode - 1);
+            Input::hmd.nextrot -= (speed * joystick.x);
+            if (Input::hmd.nextrot > 180.0f)
             {
-                int speed = Core::settings.detail.turnmode == 1 ? 1 : (Core::settings.detail.turnmode - 1);
-                Input::hmd.nextrot -= (speed * joystick.x);
-                if (Input::hmd.nextrot > 180.0f)
-                {
-                    Input::hmd.nextrot -= 360.f;
-                }
+                Input::hmd.nextrot -= 360.f;
             }
         }
     }
