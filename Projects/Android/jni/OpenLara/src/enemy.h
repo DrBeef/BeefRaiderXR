@@ -542,8 +542,8 @@ struct Enemy : Character {
 };
 
 
-#define WOLF_TURN_FAST   (DEG2RAD * 150)
-#define WOLF_TURN_SLOW   (DEG2RAD * 60)
+#define WOLF_TURN_FAST   (DEG2RAD * 180)
+#define WOLF_TURN_SLOW   (DEG2RAD * 90)
 #define WOLF_DIST_STALK  STALK_BOX
 #define WOLF_DIST_BITE   345
 #define WOLF_DIST_ATTACK (1024 + 512)
@@ -652,7 +652,7 @@ struct Wolf : Enemy {
             case STATE_ATTACK :
             case STATE_BITE   :
                 if (nextState == STATE_NONE && targetInView && (collide(target) & HIT_MASK)) {
-                    bite(6, vec3(0.0f, -14.0f, 174.0f), state == STATE_ATTACK ? 50.0f : 100.0f);
+                    bite(6, vec3(0.0f, -14.0f, 174.0f), state == STATE_ATTACK ? 100.0f : 150.0f);
                     nextState = state == STATE_ATTACK ? STATE_RUN : STATE_GROWL;
                 }
                 return state == STATE_ATTACK ? STATE_RUN : state;
@@ -771,7 +771,7 @@ struct Lion : Enemy {
             case STATE_ATTACK :
             case STATE_BITE   :
                 if (nextState == STATE_NONE && (collide(target) & HIT_MASK)) {
-                    bite(21, vec3(-2.0f, -10.0f, 132.0f), state == STATE_ATTACK ? 150.0f : 250.0f);
+                    bite(21, vec3(-2.0f, -10.0f, 132.0f), state == STATE_ATTACK ? 200.0f : 250.0f);
                     nextState = STATE_STOP;
                 }
         }
@@ -1190,10 +1190,10 @@ struct Rat : Enemy {
 
 #define CROCODILE_TURN_SLOW   (DEG2RAD * 90)
 #define CROCODILE_TURN_FAST   (DEG2RAD * 180)
-#define CROCODILE_DIST_BITE   435.0f
+#define CROCODILE_DIST_BITE   535.0f
 #define CROCODILE_DIST_TURN   (1024 * 3)
-#define CROCODILE_LIFT_SPEED  960.0f
-#define CROCODILE_DAMAGE      25
+#define CROCODILE_LIFT_SPEED  1024.0f
+#define CROCODILE_DAMAGE      250
 
 struct Crocodile : Enemy {
 
@@ -1586,7 +1586,7 @@ struct Bat : Enemy {
                     mood = MOOD_SLEEP;
                     return STATE_FLY;
                 } else
-                    bite(4, vec3(0.0f, 16.0f, 45.0f), 2);
+                    bite(4, vec3(0.0f, 16.0f, 45.0f), 20);
                 break;
             case STATE_FLY    : 
                 if (collide(target)) {
@@ -1632,8 +1632,8 @@ struct Bat : Enemy {
 #define REX_TURN_FAST       (DEG2RAD * 120)
 #define REX_TURN_SLOW       (DEG2RAD * 60)
 #define REX_DAMAGE          1000
-#define REX_DAMAGE_WALK     1
-#define REX_DAMAGE_RUN      10
+#define REX_DAMAGE_WALK     80
+#define REX_DAMAGE_RUN      100
 
 struct Rex : Enemy {
 
@@ -1823,7 +1823,7 @@ struct Raptor : Enemy {
             case STATE_ATTACK_2 :
             case STATE_BITE     :
                 if (nextState == STATE_NONE && targetInView && (mask & HIT_MASK)) {
-                    bite(22, vec3(0.0f, 66.0f, 318.0f), 100);                    
+                    bite(22, vec3(0.0f, 66.0f, 318.0f), 200);
                     nextState = state == STATE_ATTACK_2 ? STATE_RUN : STATE_STOP;
                 }
                 break;

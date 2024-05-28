@@ -1314,9 +1314,8 @@ void VR_HandleControllerInput() {
                 {
                     if (spingrab == (grabcount / 2))
                     {
-                        Input::hmd.nextrot += PI;
                         lara->angle.y -= PI;
-                        Input::hmd.head.rotateY(-PI);
+                        Input::hmd.nextrot += PI;
                     }
                 }
                 else
@@ -1508,9 +1507,9 @@ void VR_HandleControllerInput() {
 
             if (Core::settings.detail.mixedRealityEnabled)
             {
-                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot)
-                -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
-                 +Input::hmd.angleY));
+                Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-Input::hmd.extrarot
+                    -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
+                     +Input::hmd.angleY));
             }
             else if (pov != ICamera::POV_1ST_PERSON)
             {
