@@ -1421,11 +1421,11 @@ void VR_HandleControllerInput() {
 
     int sector = joy.sector(2);
 
-    //Allow Lara to hop back if holding guns
-    if (((laraState == Lara::STATE_STOP ||
-            laraState == Lara::STATE_FAST_BACK) &&
-        (joy.quadrant() == 0) &&
-        (lara && !lara->emptyHands())))
+    //Allow Lara to hop back if holding guns (3rd person only)
+    if (pov != ICamera::POV_1ST_PERSON &&
+        (laraState == Lara::STATE_STOP || laraState == Lara::STATE_FAST_BACK) &&
+        joy.quadrant() == 0 &&
+        lara && !lara->emptyHands())
     {
         Input::setJoyPos(joyRight, jkL, vec2(0, 1));
     }
@@ -1471,7 +1471,7 @@ void VR_HandleControllerInput() {
 
             if (Core::settings.detail.mixedRealityEnabled)
             {
-                addMat.rotateY(-Input::hmd.angleY);
+                addMat.rotateY(-Input::hmd.angleY );
             }
 
             Input::hmd.head.setRot((addMat * Input::hmd.body).getRot());

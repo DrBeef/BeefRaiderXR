@@ -238,9 +238,14 @@ vec3 calcNormal(vec2 tc, float base) {
 		vec4 color = mix(refr, refl, fresnel);
 		color.xyz += spec * 1.5;
 
+		color.w = texture2D(sMask, vMaskCoord).x;
+
+#ifdef ANDROID
 		//DRBEEF - For some reason the sMask texture was returning an alpha of 1.0 on Android which meant
-		//the water just looked like an oil slick.. I have no idea why?, but hardcoding this looks decent
-		color.w = 0.75;//texture2D(sMask, vMaskCoord).x;
+		//the water just looked like an oil slick.. I have no idea why?, but hardcoding this looks reasonable
+		color.w = 0.75;
+#endif
+
 		applyFog(color.xyz, vViewVec.y / viewVec.y);
 
 		return color;

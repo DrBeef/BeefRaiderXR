@@ -597,6 +597,10 @@ namespace GAPI {
             defines[0] = 0;
             strcat(defines, "#define VER3\n");
 
+            #ifdef ANDROID
+                strcat(defines, "#define ANDROID\n");
+            #endif
+
             for (int i = 0; i < defCount; i++) {
                 sprintf(defines + strlen(defines), "#define %s\n", DefineName[def[i]]);
             }
@@ -1338,6 +1342,7 @@ namespace GAPI {
                                      "#define varying   out\n"
                                      "#define attribute in\n"
                                      "#define texture2D texture\n");
+
             // fragment
             strcat(GLSL_HEADER_FRAG, "#version 300 es\n");
             strcat(GLSL_HEADER_FRAG, extHeader);
