@@ -1431,11 +1431,15 @@ void VR_HandleControllerInput() {
     }
     //Trigger walking back or side stepping from a stopped position
     else if ((laraState == Lara::STATE_STOP ||
-            laraState == Lara::STATE_BACK) &&
-        (joy.sector(2) == 0) &&
+            laraState == Lara::STATE_BACK ||
+            laraState == Lara::STATE_STEP_LEFT ||
+            laraState == Lara::STATE_STEP_RIGHT) &&
+        (joy.sector(4) != -1) && (joy.sector(4) != 2) &&
         walkingEnabled)
     {
-        Input::setJoyPos(joyRight, jkL, vec2(0, 1));
+        int back = joy.sector(4) == 0 ? 1 : 0;
+        int side = joy.sector(4) == 1 ? 1 : joy.sector(4) == 3 ? -1 : 0;
+        Input::setJoyPos(joyRight, jkL, vec2(side, back));
     }
     else if (laraStand == Lara::STAND_UNDERWATER)
     {

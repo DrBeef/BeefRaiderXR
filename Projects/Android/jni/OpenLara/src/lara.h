@@ -3450,7 +3450,7 @@ struct Lara : Character {
             bool isFirstPerson = camera->getPointOfView() == ICamera::POV_1ST_PERSON;
 
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
-            if (!(input & JUMP) && !inventory->isActive() && (isFirstPerson || stand != STAND_UNDERWATER)) {
+            if (!(input & JUMP) && !(input & WALK) && !inventory->isActive() && (isFirstPerson || stand != STAND_UNDERWATER)) {
                 input &= ~(LEFT | RIGHT);
             }
 
