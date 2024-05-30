@@ -1586,7 +1586,7 @@ struct Bat : Enemy {
                     mood = MOOD_SLEEP;
                     return STATE_FLY;
                 } else
-                    bite(4, vec3(0.0f, 16.0f, 45.0f), 20);
+                    bite(4, vec3(0.0f, 16.0f, 45.0f), 2);
                 break;
             case STATE_FLY    : 
                 if (collide(target)) {
