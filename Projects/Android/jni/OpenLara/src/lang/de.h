@@ -363,6 +363,10 @@ const char *STR_DE[] = { ""
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
         , "Draw Detailed Sky"
+
+
+        //VERSION
+        , BEEFRAIDERXR_VERSION
 };
 
 #endif

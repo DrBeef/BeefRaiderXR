@@ -725,6 +725,10 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
         , "Draw Detailed Sky"
+
+
+        //VERSION
+        , BEEFRAIDERXR_VERSION
 };
 
 #endif

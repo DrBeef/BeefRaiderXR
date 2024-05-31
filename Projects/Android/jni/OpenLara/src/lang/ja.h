@@ -606,6 +606,10 @@ const char *STR_JA[] = { "\x11\x02\x70\x01\x97\x01\xD6\xFF\xFF"
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
         , "Draw Detailed Sky"
+
+
+        //VERSION
+        , BEEFRAIDERXR_VERSION
 };
 
 #endif

@@ -263,6 +263,10 @@ enum StringID {
     ,STR_OPT_DETAIL_MIXED_REALITY
     ,STR_OPT_DETAIL_SKY
 
+
+//VERSION
+    ,STR_BEEFRAIDERXR_VERSION
+
     , STR_MAX
 };
 
@@ -314,6 +318,8 @@ const char *helpText =
     "DOZY on - Look & Duck & Action & Jump@"
     "DOZY off - Walk@"
     "Free Camera - hold L & R stick";
+
+#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.4.7"
 
 #include "lang/en.h"
 #include "lang/fr.h"

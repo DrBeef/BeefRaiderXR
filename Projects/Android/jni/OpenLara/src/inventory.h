@@ -2185,6 +2185,8 @@ struct Inventory {
             Core::active.shader->setParam(uViewProj, Core::mViewProj);
         }
 
+        UI::textOut(vec2(UI::width / 2, 520 + 24), STR_BEEFRAIDERXR_VERSION, UI::aCenter, 24);
+
         float eye = getEyeOffset() * 0.5f;
 
         if (page == PAGE_SAVEGAME) {
