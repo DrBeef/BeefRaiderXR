@@ -724,6 +724,10 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
         , "1st Person IK Body"
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
+        , "Off"
+        , "On"
+        , "Battery Saver"
+        , "Fixed Camera Mode"
         , "Draw Detailed Sky"
 
 

@@ -362,6 +362,10 @@ const char *STR_DE[] = { ""
         , "1st Person IK Body"
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
+        , "Off"
+        , "On"
+        , "Battery Saver"
+        , "Fixed Camera Mode"
         , "Draw Detailed Sky"
 
 

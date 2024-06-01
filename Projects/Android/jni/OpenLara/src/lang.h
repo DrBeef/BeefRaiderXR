@@ -261,6 +261,10 @@ enum StringID {
     ,STR_OPT_DETAIL_HIDE_IK_BODY
     ,STR_OPT_DETAIL_AUTO_3RD_PERSON
     ,STR_OPT_DETAIL_MIXED_REALITY
+    ,STR_MR_OFF
+    ,STR_MR_ON
+    ,STR_MR_BATTERY_SAVER
+    ,STR_OPT_DETAIL_FIXED_CAMERA
     ,STR_OPT_DETAIL_SKY
 
 
@@ -319,7 +323,7 @@ const char *helpText =
     "DOZY off - Walk@"
     "Free Camera - hold L & R stick";
 
-#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.4.7"
+#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.4.8"
 
 #include "lang/en.h"
 #include "lang/fr.h"

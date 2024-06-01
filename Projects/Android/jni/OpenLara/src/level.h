@@ -2537,7 +2537,9 @@ struct Level : IGame {
         renderRooms(roomsList, roomsCount, 0);
         renderEntities(0);
         if (Core::pass != Core::passShadow && skyIsVisible &&
-            !Core::settings.detail.mixedRealityEnabled &&
+#ifdef ANDROID
+            (Core::settings.detail.mixedRealityMode != 1) &&
+#endif
             Core::settings.detail.sky) {
             renderSky();
         }

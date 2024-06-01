@@ -2294,7 +2294,7 @@ struct Lara : Character {
                     camera->timer = -1.0f;
                     camera->viewTarget = NULL;
                 } else {
-                    camera->mode = Camera::MODE_STATIC;
+                    camera->mode = Core::settings.detail.mixedRealityMode ? camera->mode : Camera::MODE_STATIC;
                 }
             } else {
                 camera->viewTarget = NULL;
@@ -2473,7 +2473,7 @@ struct Lara : Character {
                              (info.trigger == TR::Level::Trigger::SWITCH || camera->viewIndex != camera->viewIndexLast))
                         {
                             camera->smooth = cam.speed > 0;
-                            camera->mode   = heavy ? Camera::MODE_HEAVY : Camera::MODE_STATIC;
+                            camera->mode   = Core::settings.detail.mixedRealityMode ? camera->mode : (heavy ? Camera::MODE_HEAVY : Camera::MODE_STATIC);
                             camera->timer  = cam.timer == 1 ? EPS : float(cam.timer);
                             camera->speed  = cam.speed * 8;
 

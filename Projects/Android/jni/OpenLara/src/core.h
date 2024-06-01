@@ -312,7 +312,7 @@ namespace Core {
             // Switch to 3rd person automatically on interaction/cutscene
             uint8 auto3rdPerson;
             uint8 toyModeEnabled;
-            uint8 mixedRealityEnabled;
+            uint8 mixedRealityMode;
 
             void setFilter(Quality value) {
                 if (value > MEDIUM && !(support.maxAniso > 1))
@@ -902,7 +902,7 @@ namespace Core {
         settings.detail.pointOfViewMode = 1;
         settings.detail.auto3rdPerson = 1;
         settings.detail.toyModeEnabled = 1;
-        settings.detail.mixedRealityEnabled = 0;
+        settings.detail.mixedRealityMode = 0;
         settings.detail.firstPersonIKBody = 1;
 
 

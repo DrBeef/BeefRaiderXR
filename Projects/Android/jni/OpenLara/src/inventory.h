@@ -160,7 +160,10 @@ static const OptionItem optDetail[] = {
 
 #ifdef ANDROID
     //Mixed Reality
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_MIXED_REALITY,   SETTINGS( detail.mixedRealityEnabled), STR_OFF, 0, 1),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_MIXED_REALITY,   SETTINGS( detail.mixedRealityMode), STR_MR_OFF, 0, 2),
+#else
+    //Fixed Camera
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_FIXED_CAMERA,   SETTINGS(detail.mixedRealityMode), STR_OFF, 0, 1),
 #endif
 
     /* Removed the VR option selection since it is always VR */

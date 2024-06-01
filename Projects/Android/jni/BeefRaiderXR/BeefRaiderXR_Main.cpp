@@ -804,7 +804,8 @@ extern "C" {
     {
         return 	(strstr(gAppState.OpenXRHMD, "meta") != NULL) &&
             !VR_UseScreenLayer() &&
-            Core::settings.detail.mixedRealityEnabled && !inventory->isActive();
+            (Core::settings.detail.mixedRealityMode == 1) 
+            && !inventory->isActive();
     }
 }
 #endif
@@ -915,6 +916,17 @@ void VR_FrameSetup()
     vec3 zero = Input::hmd.zero;
 
     Input::hmd.angleY = Controller::getAngleAbs(mat4(vrOrientation, vec3(0)).dir().xyz()).y;
+    float angleY = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
+
+    static bool prevMRMode = Core::settings.detail.mixedRealityMode;
+    if (!prevMRMode && (Core::settings.detail.mixedRealityMode > 0))
+    {
+        //Switch on MR mode reset
+        Input::hmd.extrarot = 0;
+        Input::hmd.nextrot = 0;
+        Input::hmd.extrarot2 = 0;
+    }
+    prevMRMode = (bool)Core::settings.detail.mixedRealityMode;
 
     if (pov == ICamera::POV_1ST_PERSON || Input::hmd.forceUpdatePose)
     {
@@ -923,9 +935,8 @@ void VR_FrameSetup()
             Input::hmd.head = head;
             Input::hmd.body.setRot(head.getRot());
         }
-        if (!Core::settings.detail.mixedRealityEnabled)
+        if (!Core::settings.detail.mixedRealityMode)
         {
-            float angleY = -(Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
             if (pov != ICamera::POV_1ST_PERSON)
             {
                 if (laraStand == Lara::STAND_UNDERWATER)
@@ -1276,7 +1287,7 @@ void VR_HandleControllerInput() {
                         Input::hmd.head.rotateY(PI);
                     }
 
-                    if (!Core::settings.detail.mixedRealityEnabled)
+                    if (!Core::settings.detail.mixedRealityMode)
                     {
                         Input::hmd.nextrot += PI;
                     }
@@ -1354,7 +1365,7 @@ void VR_HandleControllerInput() {
         laraState != Lara::STATE_DEATH &&
         laraState != Lara::STATE_PULL_BLOCK &&
         laraState != Lara::STATE_PUSH_BLOCK
-        && !Core::settings.detail.mixedRealityEnabled)
+        && !Core::settings.detail.mixedRealityMode)
     {
         vec2 rjoy(joystick.x, joystick.y);
         int sect = rjoy.sector(8);
@@ -1404,7 +1415,7 @@ void VR_HandleControllerInput() {
 
 
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-    if (Core::settings.detail.mixedRealityEnabled)
+    if (Core::settings.detail.mixedRealityMode)
     {
         joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot)
             - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
@@ -1473,7 +1484,7 @@ void VR_HandleControllerInput() {
             float additionalDirAngle = atan2(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
             addMat.rotateY(-additionalDirAngle);
 
-            if (Core::settings.detail.mixedRealityEnabled)
+            if (Core::settings.detail.mixedRealityMode)
             {
                 addMat.rotateY(-Input::hmd.angleY );
             }
@@ -1509,7 +1520,7 @@ void VR_HandleControllerInput() {
             joy.y = cosf(DEG2RAD * angle);
             joy.x = sinf(DEG2RAD * angle);
 
-            if (Core::settings.detail.mixedRealityEnabled)
+            if (Core::settings.detail.mixedRealityMode)
             {
                 Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-Input::hmd.extrarot
                     -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
@@ -1621,7 +1632,7 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (!Core::settings.detail.mixedRealityEnabled &&
+    if (!Core::settings.detail.mixedRealityMode &&
         !Game::level->level.isTitle())
     {
         if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
@@ -1637,7 +1648,7 @@ void VR_HandleControllerInput() {
     /*
         World orientation in mixed reality mode
     */
-    if (Core::settings.detail.mixedRealityEnabled)
+    if (Core::settings.detail.mixedRealityMode)
     {
         // easier just dumping these here as statics than creating member variables
         static vec3 left;
@@ -1737,7 +1748,7 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (lara && !inventory->active && !Core::settings.detail.mixedRealityEnabled)
+    if (lara && !inventory->active && !Core::settings.detail.mixedRealityMode)
     {
         vec2 rightJoy(rightTrackedRemoteState_new.Joystick.x, rightTrackedRemoteState_new.Joystick.y);
         int sector = rightJoy.sector(8);
@@ -1767,7 +1778,7 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (!Core::settings.detail.mixedRealityEnabled)
+    if (!Core::settings.detail.mixedRealityMode)
     {
         Input::hmd.extraworldscaler = pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE ? 12.0f : 1.0f;
     }

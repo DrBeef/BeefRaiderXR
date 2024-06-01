@@ -100,7 +100,7 @@ struct Camera : ICamera {
         target.room = eye.room;
 
         Input::hmd.mrorg = owner->pos;
-        if (Core::settings.detail.mixedRealityEnabled)
+        if (Core::settings.detail.mixedRealityMode)
         {
             Input::hmd.extraworldscaler = 15;
         }
@@ -193,7 +193,7 @@ struct Camera : ICamera {
 
     PointOfView getPointOfView(bool skipOwnerCheck = false)
     {
-        if (Core::settings.detail.mixedRealityEnabled)
+        if (Core::settings.detail.mixedRealityMode)
         {
             return POV_3RD_PERSON_VR_TOY_MODE;
         }
@@ -231,7 +231,7 @@ struct Camera : ICamera {
         PointOfView pov = getPointOfView();
         if (mode != MODE_CUTSCENE && pov >= POV_3RD_PERSON_VR_1)
         {
-            if (Core::settings.detail.mixedRealityEnabled)
+            if (Core::settings.detail.mixedRealityMode)
             {
                 fpHead.pos = Input::hmd.mrpos;
                 fpHead.pos.y -= (200 * Input::hmd.extraworldscaler);
@@ -714,7 +714,7 @@ struct Camera : ICamera {
 
         if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
         {
-            if (!Core::settings.detail.mixedRealityEnabled)
+            if (!Core::settings.detail.mixedRealityMode)
             {
                 updateListener(mViewInv* Input::hmd.head);
             }

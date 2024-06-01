@@ -772,6 +772,10 @@ const char *STR_CN[] = { "\x11\x02\x8A\x02\x6C\x01\x54\x03\x02\xFF\xFF"
         , "1st Person IK Body"
         , "Auto 3rd Person"
         , "Mixed Reality Mode"
+        , "Off"
+        , "On"
+        , "Battery Saver"
+        , "Fixed Camera Mode"
         , "Draw Detailed Sky"
 
 
