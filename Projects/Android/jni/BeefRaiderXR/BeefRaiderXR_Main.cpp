@@ -1445,6 +1445,7 @@ void VR_HandleControllerInput() {
             laraState == Lara::STATE_BACK ||
             laraState == Lara::STATE_STEP_LEFT ||
             laraState == Lara::STATE_STEP_RIGHT) &&
+        pov != ICamera::POV_1ST_PERSON &&
         (joy.sector(4) != -1) && (joy.sector(4) != 2) &&
         walkingEnabled)
     {
