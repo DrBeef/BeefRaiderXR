@@ -1070,7 +1070,7 @@ struct Lara : Character {
     }
 
     bool wpnReady() {
-        return arms[0].anim != Weapon::Anim::PREPARE && arms[0].anim != Weapon::Anim::UNHOLSTER && arms[0].anim != Weapon::Anim::HOLSTER;
+        return arms[Core::settings.detail.handedness].anim != Weapon::Anim::PREPARE && arms[Core::settings.detail.handedness].anim != Weapon::Anim::UNHOLSTER && arms[Core::settings.detail.handedness].anim != Weapon::Anim::HOLSTER;
     }
 
     void wpnDraw(bool instant = false) {
@@ -1081,7 +1081,7 @@ struct Lara : Character {
                 wpnSetAnim(arms[0], wpnState, instant ? Weapon::Anim::AIM : Weapon::Anim::PREPARE, 0.0f, 1.0f);
                 wpnSetAnim(arms[1], wpnState, instant ? Weapon::Anim::AIM : Weapon::Anim::PREPARE, 0.0f, 1.0f);
             } else
-                wpnSetAnim(arms[0], wpnState, instant ? Weapon::Anim::AIM : Weapon::Anim::UNHOLSTER, 0.0f, 1.0f);
+                wpnSetAnim(arms[Core::settings.detail.handedness], wpnState, instant ? Weapon::Anim::AIM : Weapon::Anim::UNHOLSTER, 0.0f, 1.0f);
         }
     }
 
@@ -1091,7 +1091,7 @@ struct Lara : Character {
                 wpnSetAnim(arms[0], wpnState, Weapon::Anim::UNHOLSTER, 0.0f, -1.0f);
                 wpnSetAnim(arms[1], wpnState, Weapon::Anim::UNHOLSTER, 0.0f, -1.0f);
             } else
-                wpnSetAnim(arms[0], wpnState, Weapon::Anim::HOLSTER, 0.0f, 1.0f);
+                wpnSetAnim(arms[Core::settings.detail.handedness], wpnState, Weapon::Anim::HOLSTER, 0.0f, 1.0f);
         }
     }
 
@@ -1213,6 +1213,7 @@ struct Lara : Character {
         yawAdjust.identity();
         if (wpnCurrent != TR::Entity::SHOTGUN)
             pitchAdjust.rotateX(DEG2RAD * 8);
+
         yawAdjust.rotateY(DEG2RAD * (i == 0 ? -3.5f : 3.5f));
 
         return yawAdjust.getRot() * Input::hmd.controllers[i].getRot() * pitchAdjust.getRot();
@@ -1399,9 +1400,9 @@ struct Lara : Character {
                     }
                     else if (arm.anim == Weapon::Anim::AIM)
                         arm.animation.dir = -1.0f;
-                }
 
-                if (isRifle) break;
+                    if (isRifle) break;
+                }
             }
 
             for (int i = 0; i < 2; i++)
@@ -1521,8 +1522,10 @@ struct Lara : Character {
             animation.overrides[JOINT_ARM_R1] = animation.overrides[JOINT_CHEST].inverse() * animation.overrides[JOINT_HIPS].inverse() * arm->animation.getJointRot(JOINT_ARM_R1);
             animation.overrides[JOINT_ARM_R2] = arm->animation.getJointRot(JOINT_ARM_R2);
             animation.overrides[JOINT_ARM_R3] = arm->animation.getJointRot(JOINT_ARM_R3);
+
             // left arm
-            if (wpnCurrent != TR::Entity::SHOTGUN) arm = &arms[1];
+            bool isFirstPerson = camera->getPointOfView() == ICamera::POV_1ST_PERSON;
+            if (wpnCurrent != TR::Entity::SHOTGUN && !isFirstPerson) arm = &arms[1];
 
             animation.overrides[JOINT_ARM_L1] = animation.overrides[JOINT_CHEST].inverse() * animation.overrides[JOINT_HIPS].inverse() * arm->animation.getJointRot(JOINT_ARM_L1);
             animation.overrides[JOINT_ARM_L2] = arm->animation.getJointRot(JOINT_ARM_L2);
@@ -1585,7 +1588,7 @@ struct Lara : Character {
         bool hasAim = true;
 
         quat rot;
-        Arm &arm = arms[0];
+        Arm &arm = arms[Core::settings.detail.handedness];
         if (!aim(arm.target, JOINT_ARM_R1, vec4(-PI * 0.4f, PI * 0.4f, -PI * 0.25f, PI * 0.25f), rot, &arm.rotAbs)) {
             rot = quat(0, 0, 0, 1);
             arm.target = NULL;
@@ -4170,7 +4173,33 @@ struct Lara : Character {
             visibleMask &= ~JOINT_MASK_HEAD;
         if (hideBody()) // does player want to hide body in first person?
             visibleMask &= ~JOINT_IK_BODY;
+
+        //if left handed shotgun, switch the hand joints
+        Basis temp[2];
+        bool switchShotgunJoints = Core::settings.detail.handedness &&
+            wpnCurrent == TR::Entity::SHOTGUN &&
+            getCameraPOV() == ICamera::POV_1ST_PERSON &&
+            wpnState != Weapon::IS_HIDDEN;
+        if (switchShotgunJoints)
+        {
+            temp[0] = joints[JOINT_ARM_R3];
+            temp[1] = joints[JOINT_ARM_L3];
+            swap(joints[JOINT_ARM_L3], joints[JOINT_ARM_R3]);
+
+            //Have to unadjst for this slight odd model weirdness
+            mat4 yawAdjust;
+            yawAdjust.identity();
+            yawAdjust.rotateY(DEG2RAD * 7.f);
+            joints[JOINT_ARM_R3].rot = yawAdjust.getRot() * joints[JOINT_ARM_R3].rot;
+        }
+
         Controller::render(frustum, mesh, type, caustics);
+
+        if (switchShotgunJoints)
+        {
+            joints[JOINT_ARM_R3] = temp[0];
+            joints[JOINT_ARM_L3] = temp[1];
+        }
 
         if (level->extra.laraJoints > -1) {
             const TR::Model *model = getModel();

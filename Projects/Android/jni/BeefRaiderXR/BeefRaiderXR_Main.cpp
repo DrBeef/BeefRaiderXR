@@ -953,8 +953,6 @@ void VR_FrameSetup()
                 Input::hmd.extrarot2 = angleY;
             }
         }
-        vrPosition = vrPosition.rotateY(-Input::hmd.extrarot);
-        zero = zero.rotateY(-Input::hmd.extrarot);
     }
     else
     {
@@ -962,9 +960,10 @@ void VR_FrameSetup()
         m.identity();
         m.rotateY(Input::hmd.extrarot2);
         Input::hmd.body.setRot(m.getRot());
-        vrPosition = vrPosition.rotateY(-Input::hmd.extrarot);
-        zero = zero.rotateY(-Input::hmd.extrarot);
     }
+
+    vrPosition = vrPosition.rotateY(-Input::hmd.extrarot);
+    zero = zero.rotateY(-Input::hmd.extrarot);
 
     Input::hmd.head.setPos(vrPosition);
     Input::hmd.body.setPos(vrPosition - zero);
