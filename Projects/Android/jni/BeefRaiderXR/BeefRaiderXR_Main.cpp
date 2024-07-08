@@ -802,8 +802,7 @@ int VR_SetRefreshRate(int refreshRate)
 extern "C" {
     bool IsMRMode()
     {
-        return 	(strstr(gAppState.OpenXRHMD, "meta") != NULL) &&
-            !VR_UseScreenLayer() &&
+        return 	!VR_UseScreenLayer() &&
             (Core::settings.detail.mixedRealityMode == 1) 
             && !inventory->isActive();
     }
