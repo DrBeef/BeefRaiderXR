@@ -4174,7 +4174,8 @@ struct Lara : Character {
         if (hideBody()) // does player want to hide body in first person?
             visibleMask &= ~JOINT_IK_BODY;
 
-        //if left handed shotgun, switch the hand joints
+        //if left handed shotgun, switch the hand joints, looks weird, but is the most straightforward
+        //way to get the shotgun into the "left" hand
         Basis temp[2];
         bool switchShotgunJoints = Core::settings.detail.handedness &&
             wpnCurrent == TR::Entity::SHOTGUN &&
@@ -4186,11 +4187,16 @@ struct Lara : Character {
             temp[1] = joints[JOINT_ARM_L3];
             swap(joints[JOINT_ARM_L3], joints[JOINT_ARM_R3]);
 
+            auto yawAdjust = [](quat& in, float angleDeg) {
+                mat4 yawAdjust;
+                yawAdjust.identity();
+                yawAdjust.rotateY(DEG2RAD * angleDeg);
+                in = yawAdjust.getRot() * in;
+            };
+
             //Have to unadjst for this slight odd model weirdness
-            mat4 yawAdjust;
-            yawAdjust.identity();
-            yawAdjust.rotateY(DEG2RAD * 7.f);
-            joints[JOINT_ARM_R3].rot = yawAdjust.getRot() * joints[JOINT_ARM_R3].rot;
+            yawAdjust(joints[JOINT_ARM_R3].rot, 8.f);
+            yawAdjust(joints[JOINT_ARM_L3].rot, -14.f);
         }
 
         Controller::render(frustum, mesh, type, caustics);
