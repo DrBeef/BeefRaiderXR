@@ -1724,21 +1724,13 @@ void VR_HandleControllerInput() {
     static bool allowSaveLoad = false;
     if (!allowSaveLoad)
     {
-        allowSaveLoad = !((bool)(leftTrackedRemoteState_new.Buttons & (xrButton_X|xrButton_Y)));
+        allowSaveLoad = !((bool)(leftTrackedRemoteState_new.Buttons & xrButton_Y));
     }
     else
     {
         if (!inventory->isActive())
         {
-            if (lara && lara->canSaveGame() && leftTrackedRemoteState_new.Buttons & xrButton_X)
-            {
-                //Ensure the Lara entity isn't destroyed!
-                inventory->quicksave = true;
-                inventory->toggle(0, Inventory::PAGE_SAVEGAME);
-                allowSaveLoad = false;
-                Input::hmd.forceUpdatePose = true;
-            }
-            else if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
+            if (leftTrackedRemoteState_new.Buttons & xrButton_Y)
             {
                 inventory->toggle(0, Inventory::PAGE_OPTION, TR::Entity::INV_PASSPORT);
                 allowSaveLoad = false;

@@ -46,10 +46,10 @@ const char *STR_EN[] = { ""
     , "INVENTORY"
     , "ITEMS"
 // save game page
-    , "Save Game?"
+    , "Save Game"
     , "Latest Quick/Crystal Save"
 // inventory option
-    , "New/Load Game"
+    , "New/Load/Save Game"
     , "Map"
     , "Compass"
     , "Statistics"

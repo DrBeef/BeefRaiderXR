@@ -558,7 +558,7 @@ struct Inventory {
             anim->update();
 
             if (type == TR::Entity::INV_PASSPORT && chosen) {
-                float t = (14 + value * 5) / 30.0f;
+                float t = (13 + value * 5) / 30.0f;
 
                 if ( (anim->dir > 0.0f && anim->time > t) ||
                      (anim->dir < 0.0f && anim->time < t)) {
@@ -1099,7 +1099,7 @@ struct Inventory {
         // passport pages
             int oldValue = item->value;
             if (key == cLeft  && item->value > 0) { item->value--; item->anim->dir = -1.0f; game->playSound(TR::SND_INV_PAGE); }
-            if (key == cRight && item->value < 2) { item->value++; item->anim->dir =  1.0f; game->playSound(TR::SND_INV_PAGE); }
+            if (key == cRight && item->value < 3) { item->value++; item->anim->dir =  1.0f; game->playSound(TR::SND_INV_PAGE); }
 
             if (item->value != oldValue) {
                 slot = 0;
@@ -1108,27 +1108,46 @@ struct Inventory {
 
             if (key == cAction && phaseChoose == 1.0f && item->value != 0) {
                 TR::LevelID id = level->id;
-                switch (item->value) {
-                    case 1 : {
-                        if (level->isTitle()) { // start new game
+
+                if (level->isTitle()) {
+                    switch (item->value) {
+                        case 1: {
                             nextLevel = level->getStartId();
-                        } else { // restart level
-                            int slot = getSaveSlot(id, false);
-                            if (slot > -1)
-                                game->loadGame(slot);
-                            else
-                                nextLevel = id; 
-                            toggle();
+                            break;
                         }
+                        case 2: 
+                        case 3:
+                        {
+                            startExitCredits(1);
+                            break;
+                        }                        
+                    }
+                }
+                else
+                {
+                    switch (item->value) {
+                    case 1: {
+                        quicksave = true;
+                        active = false;
+                        phaseRing = 0.0f;
+                        toggle(0, Inventory::PAGE_SAVEGAME);
                         break;
                     }
-                    case 2 : 
-                        if (!level->isTitle())
-                            nextLevel = level->getTitleId();
+                    case 2: {
+                        int slot = getSaveSlot(id, false);
+                        if (slot > -1)
+                            game->loadGame(slot);
                         else
-                            startExitCredits(1);
+                            nextLevel = id;
+                        toggle();
                         break;
+                    }
+                    case 3:
+                        nextLevel = level->getTitleId();
+                        break;
+                    }
                 }
+
 
                 if (nextLevel != TR::LVL_MAX) {
                     item->anim->dir = -1.0f;
@@ -1613,9 +1632,11 @@ struct Inventory {
         if (game->getLevel()->isTitle()) {
             if (item->value == 1) str = STR_START_GAME;
             if (item->value == 2) str = STR_EXIT_GAME;
+            if (item->value == 3) str = STR_EXIT_GAME;
         } else {
-            if (item->value == 1) str = STR_RESTART_LEVEL;
-            if (item->value == 2) str = STR_EXIT_TO_TITLE;
+            if (item->value == 1) str = STR_SAVEGAME;
+            if (item->value == 2) str = STR_RESTART_LEVEL;
+            if (item->value == 3) str = STR_EXIT_TO_TITLE;
         }
 
         float eye = getEyeOffset();
@@ -1624,7 +1645,7 @@ struct Inventory {
         int tw = UI::getTextSize(STR[str]).x;
 
         if (item->value > 0) UI::specOut(vec2((UI::width - tw) * 0.5f - 32.0f + eye, 480 - 32), 108);
-        if (item->value < 2) UI::specOut(vec2((UI::width + tw) * 0.5f + 16.0f + eye, 480 - 32), 109);
+        if (item->value < 3) UI::specOut(vec2((UI::width + tw) * 0.5f + 16.0f + eye, 480 - 32), 109);
 
         if (item->value != 0) return;
 
