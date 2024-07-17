@@ -69,11 +69,16 @@ XrAction GamepadAAction;
 XrAction GamepadBAction;
 XrAction GamepadXAction;
 XrAction GamepadYAction;
-XrAction GamepadSqueezeClickAction;
-XrAction GamepadThumbstickAction;
-XrAction GamepadThumbstickClickAction;
-XrAction GamepadTriggerAction;
-XrAction GamepadVibrateAction;
+XrAction GamepadShoulderLeftClickAction;
+XrAction GamepadShoulderRightClickAction;
+XrAction GamepadThumbstickLeftAction;
+XrAction GamepadThumbstickRightAction;
+XrAction GamepadThumbstickLeftClickAction;
+XrAction GamepadThumbstickRightClickAction;
+XrAction GamepadLeftTriggerAction;
+XrAction GamepadRightTriggerAction;
+XrAction GamepadLeftVibrateAction;
+XrAction GamepadRightVibrateAction;
 
 //Trackpads (Wands / Index) 
 XrAction trackPadAction; //X/Y
@@ -325,11 +330,16 @@ void TBXR_InitActions( void )
         CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_bclick", "Gamepad_Bkey", 1, &gamepadSubactionPath, &GamepadBAction);
         CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_xclick", "Gamepad_Xkey", 1, &gamepadSubactionPath, &GamepadXAction);
         CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_yclick", "Gamepad_Ykey", 1, &gamepadSubactionPath, &GamepadYAction);
-        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_squeeze", "Gamepad_Squeeze", 1, &gamepadSubactionPath, &GamepadSqueezeClickAction);
-        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_thumbstickclick", "Gamepad_ThumbstickClick", 1, &gamepadSubactionPath, &GamepadThumbstickClickAction);
-        CreateAction(actionSet, XR_ACTION_TYPE_VIBRATION_OUTPUT, "vibrate_gamepad", "Vibrate Gamepad", 1, &gamepadSubactionPath, &GamepadVibrateAction);
-        CreateAction(actionSet, XR_ACTION_TYPE_VECTOR2F_INPUT, "gamepad_thumbstick", "GamepadThumbstick", 1, &gamepadSubactionPath, &GamepadThumbstickAction);
-        CreateAction(actionSet, XR_ACTION_TYPE_VECTOR2F_INPUT, "gamepad_trigger", "GamepadTrigger", 1, &gamepadSubactionPath, &GamepadTriggerAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_leftshoulder", "Gamepad_LeftShoulder", 1, &gamepadSubactionPath, &GamepadShoulderLeftClickAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_rightshoulder", "Gamepad_RightShoulder", 1, &gamepadSubactionPath, &GamepadShoulderRightClickAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_leftthumbstickclick", "Gamepad_ThumbstickLeftClick", 1, &gamepadSubactionPath, &GamepadThumbstickLeftClickAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_rightthumbstickclick", "Gamepad_ThumbstickRightClick", 1, &gamepadSubactionPath, &GamepadThumbstickRightClickAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_VIBRATION_OUTPUT, "vibrate_leftgamepad", "Vibrate Left Gamepad", 1, &gamepadSubactionPath, &GamepadLeftVibrateAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_VIBRATION_OUTPUT, "vibrate_rightgamepad", "Vibrate Right Gamepad", 1, &gamepadSubactionPath, &GamepadRightVibrateAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_VECTOR2F_INPUT, "gamepad_leftthumbstick", "GamepadLeftThumbstick", 1, &gamepadSubactionPath, &GamepadThumbstickLeftAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_VECTOR2F_INPUT, "gamepad_rightthumbstick", "GamepadRightThumbstick", 1, &gamepadSubactionPath, &GamepadThumbstickRightAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_FLOAT_INPUT, "gamepad_lefttrigger", "GamepadLeftTrigger", 1, &gamepadSubactionPath, &GamepadLeftTriggerAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_FLOAT_INPUT, "gamepad_righttrigger", "GamepadRightTrigger", 1, &gamepadSubactionPath, &GamepadRightTriggerAction);
     }
 
     XrPath selectPath[SIDE_COUNT];
@@ -537,18 +547,18 @@ void TBXR_InitActions( void )
         bindings[currBinding++] = ActionSuggestedBinding(GamepadBackAction, GamepadMenuClickPath);
 
         //TRIGGERS
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadTriggerAction, GamepadTriggerLeftValuePath);
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadTriggerAction, GamepadTriggerRightValuePath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadLeftTriggerAction, GamepadTriggerLeftValuePath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadRightTriggerAction, GamepadTriggerRightValuePath);
 
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickAction, GamepadThumbstickLeftPosPath);
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickAction, GamepadThumbstickRightPosPath);
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickClickAction, GamepadThumbstickLeftClickPath);
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickClickAction, GamepadThumbstickRightClickPath);
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadSqueezeClickAction, GamepadShoulderLeftClickPath);
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadSqueezeClickAction, GamepadShoulderRightClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickLeftAction, GamepadThumbstickLeftPosPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickRightAction, GamepadThumbstickRightPosPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickLeftClickAction, GamepadThumbstickLeftClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickRightClickAction, GamepadThumbstickRightClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadShoulderLeftClickAction, GamepadShoulderLeftClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadShoulderRightClickAction, GamepadShoulderRightClickPath);
 
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadVibrateAction, GamepadHapticLeftPath);
-        bindings[currBinding++] = ActionSuggestedBinding(GamepadVibrateAction, GamepadHapticRightPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadLeftVibrateAction, GamepadHapticLeftPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadRightVibrateAction, GamepadHapticRightPath);
 
         XrInteractionProfileSuggestedBinding suggestedBindings = {};
         suggestedBindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
