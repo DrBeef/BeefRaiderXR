@@ -86,7 +86,18 @@ typedef struct {
 } ovrInputStateTrackedRemote;
 
 typedef struct {
-    GLboolean Active;
+    uint32_t Buttons;
+    float IndexTriggerLeft;
+    float IndexTriggerRight;
+    float GripTriggerLeft;
+    float GripTriggerRight;
+    XrVector2f JoystickLeft;
+    XrVector2f JoystickRight;
+    bool DPad[4]; //North, East, South, West
+} ovrInputStateGamepad;
+
+typedef struct {
+    bool Active;
     XrPosef Pose;
     XrPosef GripPose;
     XrSpaceVelocity Velocity;
@@ -94,8 +105,7 @@ typedef struct {
 
 typedef enum control_scheme {
     RIGHT_HANDED_DEFAULT = 0,
-    LEFT_HANDED_DEFAULT = 10,
-    WEAPON_ALIGN = 99
+    LEFT_HANDED_DEFAULT = 10
 } control_scheme_t;
 
 typedef struct {
@@ -189,6 +199,7 @@ typedef struct _OVRAPP
     XrView* Views;
     
     int controllersPresent = -1;
+    int gamepadPresent = -1;
     float currentDisplayRefreshRate;
     float* SupportedDisplayRefreshRates;
     uint32_t RequestedDisplayRefreshRateIndex;

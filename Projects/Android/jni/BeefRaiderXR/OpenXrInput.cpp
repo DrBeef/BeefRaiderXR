@@ -59,6 +59,22 @@ XrAction BTouchAction;
 XrAction XTouchAction;
 XrAction YTouchAction;
 
+//Gamepad Actions
+XrAction GamepadBackAction;
+XrAction GamepadDPadUpAction;
+XrAction GamepadDPadDownAction;
+XrAction GamepadDPadLeftAction;
+XrAction GamepadDPadRightAction;
+XrAction GamepadAAction;
+XrAction GamepadBAction;
+XrAction GamepadXAction;
+XrAction GamepadYAction;
+XrAction GamepadSqueezeClickAction;
+XrAction GamepadThumbstickAction;
+XrAction GamepadThumbstickClickAction;
+XrAction GamepadTriggerAction;
+XrAction GamepadVibrateAction;
+
 //Trackpads (Wands / Index) 
 XrAction trackPadAction; //X/Y
 XrAction trackPadTouchAction;
@@ -69,9 +85,10 @@ XrAction trackPadForceAction;
 
 XrAction aimAction;
 
-XrSpace aimSpace[SIDE_COUNT];
-XrPath handSubactionPath[SIDE_COUNT];
-XrSpace handSpace[SIDE_COUNT];
+XrSpace aimSpace[2];
+XrPath handSubactionPath[2];
+XrSpace handSpace[2];
+XrPath gamepadSubactionPath;
 
 
 int osGetTimeMS();
@@ -138,6 +155,20 @@ XrActionSuggestedBinding ActionSuggestedBinding(XrAction action, XrPath path) {
     asb.action = action;
     asb.binding = path;
     return asb;
+}
+
+XrActionStateBoolean GetActionStateBoolean(XrAction action) {
+    XrActionStateGetInfo getInfo = {};
+    getInfo.type = XR_TYPE_ACTION_STATE_GET_INFO;
+    getInfo.action = action;
+    getInfo.next = NULL;
+    getInfo.subactionPath = gamepadSubactionPath;
+
+    XrActionStateBoolean state = {};
+    state.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+    state.next = NULL;
+    CHECK_XRCMD(xrGetActionStateBoolean(gAppState.Session, &getInfo, &state));
+    return state;
 }
 
 XrActionStateBoolean GetActionStateBoolean(XrAction action, int hand) {
@@ -226,6 +257,9 @@ void TBXR_InitActions( void )
     CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/hand/left", &handSubactionPath[SIDE_LEFT]));
     CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/hand/right", &handSubactionPath[SIDE_RIGHT]));
 
+    //And the gamepad
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad", &gamepadSubactionPath));
+
     // Create actions.
     {
         // Create an input action for grabbing objects with the left and right hands.
@@ -279,6 +313,23 @@ void TBXR_InitActions( void )
         CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "btouch", "Btouch", SIDE_COUNT, handSubactionPath, &BTouchAction);
         CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "xtouch", "Xtouch", SIDE_COUNT, handSubactionPath, &XTouchAction);
         CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "ytouch", "Ytouch", SIDE_COUNT, handSubactionPath, &YTouchAction);
+
+
+        //create actions for gamepad
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_back", "Gamepad_Back", 1, &gamepadSubactionPath, &GamepadBackAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_dpadup", "Gamepad_DPadUp", 1, &gamepadSubactionPath, &GamepadDPadUpAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_dpaddown", "Gamepad_DPadDown", 1, &gamepadSubactionPath, &GamepadDPadDownAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_dpadleft", "Gamepad_DPadLeft", 1, &gamepadSubactionPath, &GamepadDPadLeftAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_dpadright", "Gamepad_DPadRight", 1, &gamepadSubactionPath, &GamepadDPadRightAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_aclick", "Gamepad_Akey", 1, &gamepadSubactionPath, &GamepadAAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_bclick", "Gamepad_Bkey", 1, &gamepadSubactionPath, &GamepadBAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_xclick", "Gamepad_Xkey", 1, &gamepadSubactionPath, &GamepadXAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_yclick", "Gamepad_Ykey", 1, &gamepadSubactionPath, &GamepadYAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_squeeze", "Gamepad_Squeeze", 1, &gamepadSubactionPath, &GamepadSqueezeClickAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_BOOLEAN_INPUT, "gamepad_thumbstickclick", "Gamepad_ThumbstickClick", 1, &gamepadSubactionPath, &GamepadThumbstickClickAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_VIBRATION_OUTPUT, "vibrate_gamepad", "Vibrate Gamepad", 1, &gamepadSubactionPath, &GamepadVibrateAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_VECTOR2F_INPUT, "gamepad_thumbstick", "GamepadThumbstick", 1, &gamepadSubactionPath, &GamepadThumbstickAction);
+        CreateAction(actionSet, XR_ACTION_TYPE_VECTOR2F_INPUT, "gamepad_trigger", "GamepadTrigger", 1, &gamepadSubactionPath, &GamepadTriggerAction);
     }
 
     XrPath selectPath[SIDE_COUNT];
@@ -330,6 +381,28 @@ void TBXR_InitActions( void )
     XrPath BTouchPath[SIDE_COUNT];
     XrPath XTouchPath[SIDE_COUNT];
     XrPath YTouchPath[SIDE_COUNT];
+
+    //Gamepad Things
+    XrPath GamepadMenuClickPath;
+    XrPath GamepadAClickPath;
+    XrPath GamepadBClickPath;
+    XrPath GamepadXClickPath;
+    XrPath GamepadYClickPath;
+    XrPath GamepadDPadUpPath;
+    XrPath GamepadDPadRightPath;
+    XrPath GamepadDPadDownPath;
+    XrPath GamepadDPadLeftPath;
+    XrPath GamepadThumbstickLeftPosPath;
+    XrPath GamepadThumbstickLeftClickPath;
+    XrPath GamepadThumbstickRightPosPath;
+    XrPath GamepadThumbstickRightClickPath;
+    XrPath GamepadShoulderLeftClickPath;
+    XrPath GamepadShoulderRightClickPath;
+    XrPath GamepadTriggerLeftValuePath;
+    XrPath GamepadTriggerRightValuePath;
+    XrPath GamepadHapticLeftPath;
+    XrPath GamepadHapticRightPath;
+
 
     CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/hand/left/input/select/click", &selectPath[SIDE_LEFT]));
     CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/hand/right/input/select/click", &selectPath[SIDE_RIGHT]));
@@ -409,10 +482,85 @@ void TBXR_InitActions( void )
 
 
 
+    //Gamepad paths
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/menu/click", &GamepadMenuClickPath));
+    //CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/view/click", &selectPath[SIDE_GAMEPAD]));
+
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/a/click", &GamepadAClickPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/b/click", &GamepadBClickPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/x/click", &GamepadXClickPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/y/click", &GamepadYClickPath));
+
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/dpad_up/click", &GamepadDPadUpPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/dpad_right/click", &GamepadDPadRightPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/dpad_down/click", &GamepadDPadDownPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/dpad_left/click", &GamepadDPadLeftPath));
+
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/thumbstick_left", &GamepadThumbstickLeftPosPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/thumbstick_right", &GamepadThumbstickRightPosPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/thumbstick_left/click", &GamepadThumbstickLeftClickPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/thumbstick_right/click", &GamepadThumbstickRightClickPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/shoulder_left/click", &GamepadShoulderLeftClickPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/shoulder_right/click", &GamepadShoulderRightClickPath));
+
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/trigger_left/value", &GamepadTriggerLeftValuePath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/input/trigger_right/value", &GamepadTriggerRightValuePath));
+
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/output/haptic_left", &GamepadHapticLeftPath));
+    CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/user/gamepad/output/haptic_right", &GamepadHapticRightPath));
+
 
     XrResult result;
 
-    //New First try Vive Wands
+    //GAMEPAD
+    {
+        XrPath xboxControllerInteractionProfilePath;
+        CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/interaction_profiles/microsoft/xbox_controller",
+            &xboxControllerInteractionProfilePath));
+
+        XrActionSuggestedBinding bindings[128];
+        int currBinding = 0;
+
+        //Buttons
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadXAction, GamepadXClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadYAction, GamepadYClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadAAction, GamepadAClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadBAction, GamepadBClickPath);
+
+        //D-Pad
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadDPadUpAction, GamepadDPadUpPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadDPadDownAction, GamepadDPadDownPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadDPadLeftAction, GamepadDPadLeftPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadDPadRightAction, GamepadDPadRightPath);
+
+        //Menu Button
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadBackAction, GamepadMenuClickPath);
+
+        //TRIGGERS
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadTriggerAction, GamepadTriggerLeftValuePath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadTriggerAction, GamepadTriggerRightValuePath);
+
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickAction, GamepadThumbstickLeftPosPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickAction, GamepadThumbstickRightPosPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickClickAction, GamepadThumbstickLeftClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadThumbstickClickAction, GamepadThumbstickRightClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadSqueezeClickAction, GamepadShoulderLeftClickPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadSqueezeClickAction, GamepadShoulderRightClickPath);
+
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadVibrateAction, GamepadHapticLeftPath);
+        bindings[currBinding++] = ActionSuggestedBinding(GamepadVibrateAction, GamepadHapticRightPath);
+
+        XrInteractionProfileSuggestedBinding suggestedBindings = {};
+        suggestedBindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
+        suggestedBindings.interactionProfile = xboxControllerInteractionProfilePath;
+        suggestedBindings.suggestedBindings = bindings;
+        suggestedBindings.countSuggestedBindings = currBinding;
+        suggestedBindings.next = NULL;
+        result = xrSuggestInteractionProfileBindings(gAppState.Instance, &suggestedBindings);
+
+    }
+
+    //Vive Wands
     {
         //https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#_htc_vive_controller_profile
         XrPath viveWandInteractionProfilePath;
@@ -772,10 +920,42 @@ void TBXR_SyncActions( void )
 
 void TBXR_CheckControllers(void)
 {
+
+    //Check to see if we have a connected gamepad
+    if (gAppState.gamepadPresent == -1)
+    {
+        XrInteractionProfileState profileState = { XR_TYPE_INTERACTION_PROFILE_STATE };
+        XrResult _res = CHECK_XRCMD(xrGetCurrentInteractionProfile(gAppState.Session, gamepadSubactionPath, &profileState));
+        if (profileState.interactionProfile != XR_NULL_PATH)
+        {
+            uint32_t bufferLength = 0;
+            XrResult result = xrPathToString(gAppState.Instance, profileState.interactionProfile, 0, &bufferLength, nullptr);
+
+            if (result == XR_SUCCESS) {
+                // Allocate a buffer to store the string
+                char* pathString = new char[bufferLength];
+
+                // Convert XrPath to a string
+                result = xrPathToString(gAppState.Instance, profileState.interactionProfile, bufferLength, &bufferLength, pathString);
+                if (result == XR_SUCCESS) {
+
+                    ////Com_Printf("Controllers Found: %s", pathString);
+
+                    if (strcmp(pathString, "/interaction_profiles/microsoft/xbox_controller") == 0)
+                    {
+                        gAppState.gamepadPresent = 1;
+                    }
+                }
+
+                delete[]pathString;
+            }
+        }    
+    }
+
     if (gAppState.controllersPresent == -1)
     {
         XrInteractionProfileState profileState = { XR_TYPE_INTERACTION_PROFILE_STATE };
-        XrResult _res = CHECK_XRCMD(xrGetCurrentInteractionProfile(gAppState.Session, handSubactionPath[SIDE_RIGHT], &profileState));
+        XrResult _res = CHECK_XRCMD(xrGetCurrentInteractionProfile(gAppState.Session, handSubactionPath[SIDE_LEFT], &profileState));
         if (profileState.interactionProfile != XR_NULL_PATH)
         {
             uint32_t bufferLength = 0;
@@ -810,7 +990,7 @@ void TBXR_CheckControllers(void)
                     }
                 }
                 
-                
+                delete[]pathString;
             }
         }
     }
@@ -882,6 +1062,12 @@ void TBXR_UpdateControllers( )
         if (GetActionStateBoolean(YAction, SIDE_LEFT).currentState) leftTrackedRemoteState_new.Buttons |= xrButton_Y;
         if (GetActionStateBoolean(YTouchAction, SIDE_LEFT).currentState) leftTrackedRemoteState_new.Touches |= xrButton_Y;
     }
+
+    if (GetActionStateBoolean(GamepadAAction).currentState)
+    {
+        int brk = 99;
+    }
+
 
     //INDEX we'll need to add force check so its not boolean    
     if (gAppState.controllersPresent == VIVE_CONTROLLERS)
@@ -1036,6 +1222,11 @@ void TBXR_ProcessHaptics() {
     float timestamp = (float)(osGetTimeMS());
     float frametime = timestamp - lastFrameTime;
     lastFrameTime = timestamp;
+
+    if (gAppState.controllersPresent == -1)
+    {
+        return;
+    }
 
     for (int i = 0; i < 2; ++i) {
         if (vibration_channel_duration[i] > 0.0f ||

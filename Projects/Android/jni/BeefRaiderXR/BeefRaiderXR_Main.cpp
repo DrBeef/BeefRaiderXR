@@ -50,6 +50,9 @@ ovrTrackedController leftRemoteTracking_new;
 ovrInputStateTrackedRemote rightTrackedRemoteState_old;
 ovrInputStateTrackedRemote rightTrackedRemoteState_new;
 ovrTrackedController rightRemoteTracking_new;
+ovrInputStateGamepad gamepadState_old;
+ovrInputStateGamepad gamepadState_new;
+
 vec3_t hmdorientation_snap;
 
 /*
