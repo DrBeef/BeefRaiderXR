@@ -75,6 +75,17 @@ typedef struct {
     XrSpaceVelocity Velocity;
 } ovrTrackedController;
 
+typedef struct {
+    uint32_t Buttons;
+    float IndexTriggerLeft;
+    float IndexTriggerRight;
+    float GripTriggerLeft;
+    float GripTriggerRight;
+    XrVector2f JoystickLeft;
+    XrVector2f JoystickRight;
+    bool DPad[4]; //North, East, South, West
+} ovrInputStateGamepad;
+
 typedef enum control_scheme {
     RIGHT_HANDED_DEFAULT = 0,
     LEFT_HANDED_DEFAULT = 10,
@@ -248,6 +259,8 @@ typedef struct
     XrView* Views;
     
     int controllersPresent = -1;
+    int gamepadPresent = -1;
+
     float currentDisplayRefreshRate;
     float* SupportedDisplayRefreshRates;
     uint32_t RequestedDisplayRefreshRateIndex;
