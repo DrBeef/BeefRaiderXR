@@ -72,8 +72,10 @@ const char *STR_ES[] = { ""
     , "Sombras"
     , "Agua"
     , "VSync"
-        , "Dominant Hand"
-        , "Turn Mode"
+    , "Dominant Hand"
+    , "Chase Cam"
+    , "Turn Mode"
+    , "1st Person Auto Aim"
     , "Resolution"
     , STR_SCALE
 // sound options

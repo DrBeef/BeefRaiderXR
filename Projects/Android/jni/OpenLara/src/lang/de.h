@@ -73,7 +73,9 @@ const char *STR_DE[] = { ""
     , "Wasser"
     , "VSync"
     , "Dominant Hand"
+    , "Chase Cam"
     , "Turn Mode"
+    , "1st Person Auto Aim"
     , "Resolution"
     , STR_SCALE
 // sound options

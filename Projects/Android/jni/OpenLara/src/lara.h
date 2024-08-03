@@ -111,6 +111,7 @@ struct Lara : Character {
         ANIM_SLIDE_FORTH        = 70,
 
         ANIM_LANDING_LOW        = 82,
+        ANIM_HOP_BACK           = 89,
 
         ANIM_FALL_BACK          = 93,
 
@@ -848,7 +849,7 @@ struct Lara : Character {
             {
                 //Use body direction for the animated torso
                 vec3 ang = angle;
-                if (getCameraPOV() == ICamera::POV_1ST_PERSON)
+                if (getCameraPOV() == ICamera::POV_1ST_PERSON || Core::settings.detail.isChaseCamEnabled())
                 {
                     ang = getAngleAbs(Input::hmd.body.dir().xyz());
                 }
@@ -1047,6 +1048,12 @@ struct Lara : Character {
         if (level->isCutsceneLevel() || camera->getPointOfView() != ICamera::POV_1ST_PERSON)
         {
             return false;
+        }
+
+        if (Core::settings.detail.autoaim && !emptyHands())
+        {
+            if (input & ACTION)
+                return false;
         }
 
         return    state == STATE_WALK
@@ -2213,8 +2220,18 @@ struct Lara : Character {
         vec3 ctrlAngle = controller->angle;
         if (stand == STAND_UNDERWATER)
             ctrlAngle.x = -25 * DEG2RAD;
+
         if (!limit->alignAngle)
             ctrlAngle.y = angle.y;
+
+        //If snap turn is enabled we need to be extra forgiving for the angle as
+        //it isn't possible for the player to align themselves entirely correctly when
+        //in 3rd person with chase cam or underwater
+        if (Core::settings.detail.turnmode == 0 && 
+            camera->getPointOfView() != ICamera::POV_1ST_PERSON &&
+            (Core::settings.detail.chasecam || stand == STAND_UNDERWATER))
+            ctrlAngle.y = angle.y;
+
         controller->angle = ctrlAngle;
         mat4 m = controller->getMatrix();
         controller->angle = tmpAngle;
@@ -3459,7 +3476,7 @@ struct Lara : Character {
 
             vec3 ang;
             ang = getAngleAbs(Input::hmd.head.dir().xyz());
-            if (isFirstPerson || stand != STAND_UNDERWATER)
+            if (isFirstPerson || (stand == STAND_UNDERWATER && !Core::settings.detail.mixedRealityMode) || stand != STAND_UNDERWATER)
             {
                 angle.y = ang.y;
             }

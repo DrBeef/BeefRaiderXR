@@ -273,27 +273,21 @@ namespace UI {
             pos.z += 1024.0f;
         }
 
-        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR)
-            pos.z -= 256.0f;
+        pos.z -= 256.0f;
 
         Core::mViewInv = mat4(pos, pos + vec3(0, 0, 1), vec3(0, -1, 0));
 
-        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
-            if (head.e00 == INF)
-            {
-                mat4 h;
-                h.identity();
-                vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
-                h.rotateY(-ang.y);
-                h.setPos(Input::hmd.body.getPos() * ONE_METER);
-                head = h.inverseOrtho();
-            }
-            Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];
+        //Keep the UI components in front of player
+        {
+            mat4 h;
+            h.identity();
+            //vec3 ang = Controller::getAngleAbs(Input::hmd.body.dir().xyz());
+            h.rotateY(Input::hmd.extrarot - Input::hmd.angleY);
+            h.setPos(Input::hmd.body.getPos() * ONE_METER);
+            head = h.inverseOrtho();
         }
-
-        if (Core::settings.detail.stereo == Core::Settings::STEREO_VR) {
-            Core::mProj = Input::hmd.proj[Core::eye == -1.0f ? 0 : 1];
-        }
+        Core::mViewInv = Core::mViewInv * head * Input::hmd.eye[Core::eye == -1.0f ? 0 : 1];
+        Core::mProj = Input::hmd.proj[Core::eye == -1.0f ? 0 : 1];
 
         Core::mView   = Core::mViewInv.inverseOrtho();
         Core::viewPos = Core::mViewInv.getPos();

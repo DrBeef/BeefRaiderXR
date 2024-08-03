@@ -761,7 +761,7 @@ void TBXR_InitActions( void )
     //Pico Devices
     {
         XrPath picoMixedRealityInteractionProfilePath;
-        CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/interaction_profiles/bytedance/pico_neo3_controller_bd",
+        CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/interaction_profiles/pico/neo3_controller",
                                    &picoMixedRealityInteractionProfilePath));
 
         XrActionSuggestedBinding bindings[128];

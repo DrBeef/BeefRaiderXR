@@ -72,8 +72,10 @@ const char *STR_EN[] = { ""
     , "Shadows"
     , "Water"
     , "VSync"
-        , "Dominant Hand"
-        , "Turn Mode"
+    , "Dominant Hand"
+    , "Chase Cam"
+    , "Turn Mode"
+    , "1st Person Auto Aim"
     , "Resolution"
     , STR_SCALE
 // sound options
@@ -368,7 +370,6 @@ const char *STR_EN[] = { ""
         , "Battery Saver"
         , "Fixed Camera Mode"
         , "Draw Detailed Sky"
-
 
 //VERSION
         , BEEFRAIDERXR_VERSION

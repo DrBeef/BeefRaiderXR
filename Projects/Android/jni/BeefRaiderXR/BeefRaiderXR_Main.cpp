@@ -840,19 +840,20 @@ void VR_FrameSetup()
     mat4 head = snapTurnMat * mat4(vrOrientation, vec3(0));
 
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
+    Lara* lara = nullptr;
+    if (inventory->game->getLara())
+    {
+        lara = (Lara*)inventory->game->getLara();
+        pov = lara->camera->getPointOfView();
+    }
 
     //6DOF calculation
-    Lara *lara = nullptr;
     vec3 laraPos;
     int laraStand = Lara::STAND_GROUND;
     float laraAngleY = 0.f;
-    if (!inventory->isActive() &&
-        inventory->game->getLara())
+    if (!inventory->isActive() && lara)
     {
-        static vec3 prevPos;
-        lara = (Lara *) inventory->game->getLara();
-
-        pov = lara->camera->getPointOfView();
+        static vec3 prevPos;        
         laraPos = lara->getPos();
         laraStand = lara->stand;
         laraAngleY = lara->angle.y;
@@ -932,7 +933,7 @@ void VR_FrameSetup()
 
     if (pov == ICamera::POV_1ST_PERSON || Input::hmd.forceUpdatePose)
     {
-        if (pov == ICamera::POV_1ST_PERSON)
+        if (pov == ICamera::POV_1ST_PERSON || laraStand == Lara::STAND_UNDERWATER)
         {
             Input::hmd.head = head;
             Input::hmd.body.setRot(head.getRot());
@@ -1266,31 +1267,40 @@ void VR_HandleControllerInput() {
             (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON);
 
         //with empty hands left or right trigger is action
-        if (lara->emptyHands())
+        if (lara->emptyHands() || pov != ICamera::POV_1ST_PERSON || Core::settings.detail.autoaim)
         {
             actionPressed = (leftTrackedRemoteState_new.IndexTrigger +
                 rightTrackedRemoteState_new.IndexTrigger) > 0.5f;
         }
 
         /*
+        * Prevent triggering spingrab during certain animations:
+        * 
         * Roll Reverse Direction
+        * Back Hop
+        * 
         */
         {
             static bool reversed = false;
-            if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)
+            if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN ||
+                lara->animation.index == Lara::ANIM_HOP_BACK)
             {
                 if (!reversed &&
                     lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
                 {
-                    //Ensure Lara rotates so she can ledge grab
-                    if (pov != ICamera::POV_1ST_PERSON)
+                    //Special code to reverse direction
+                    if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN)
                     {
-                        Input::hmd.head.rotateY(PI);
-                    }
+                        //Ensure Lara rotates so she can ledge grab
+                        if (pov != ICamera::POV_1ST_PERSON)
+                        {
+                            Input::hmd.head.rotateY(PI);
+                        }
 
-                    if (!Core::settings.detail.mixedRealityMode)
-                    {
-                        Input::hmd.nextrot += PI;
+                        if (!Core::settings.detail.mixedRealityMode)
+                        {
+                            Input::hmd.nextrot += PI;
+                        }
                     }
 
                     reversed = true;
@@ -1322,7 +1332,8 @@ void VR_HandleControllerInput() {
 
             if (spingrab > 1)
             {
-                if (pov == ICamera::POV_1ST_PERSON && usingSnapTurn)
+                if ((pov == ICamera::POV_1ST_PERSON && usingSnapTurn) ||
+                    Core::settings.detail.isChaseCamEnabled())
                 {
                     if (spingrab == (grabcount / 2))
                     {
@@ -1354,10 +1365,10 @@ void VR_HandleControllerInput() {
         }
     }
 
-    //If swimming allow either joystick to snap/smooth turn you (1st person only)
+    //If swimming allow either joystick to snap/smooth turn you
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
     if (laraStand == Lara::STAND_UNDERWATER &&
-        pov == ICamera::POV_1ST_PERSON)
+        (pov == ICamera::POV_1ST_PERSON || !Core::settings.detail.mixedRealityMode))
     {
         joystick.x += leftTrackedRemoteState_new.Joystick.x;
     }
@@ -1441,6 +1452,12 @@ void VR_HandleControllerInput() {
     {
         Input::setJoyPos(joyRight, jkL, vec2(0, 1));
     }
+    //Allow Lara to hop back using X button
+    else if ((laraState == Lara::STATE_STOP || laraState == Lara::STATE_FAST_BACK) &&
+        leftTrackedRemoteState_new.Buttons & xrButton_X)
+    {
+        Input::setJoyPos(joyRight, jkL, vec2(0, 1));
+    }
     //Trigger walking back or side stepping from a stopped position
     else if ((laraState == Lara::STATE_STOP ||
             laraState == Lara::STATE_BACK ||
@@ -1461,9 +1478,18 @@ void VR_HandleControllerInput() {
             Input::hmd.head.setRot(Input::hmd.body.getRot());
             Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
         }
+        else if (!Core::settings.detail.mixedRealityMode)
+        {
+            //only pitch controlled in 3rd person
+            Input::setJoyPos(joyRight, jkL, vec2(0, leftTrackedRemoteState_new.Joystick.y));
+            if (!actionPressed)
+            {
+                Input::hmd.head.setRot(Input::hmd.body.getRot());
+            }
+        }
         else
         {
-            //Joystick controlled swimming is best
+            //Fully joystick controlled for MR mode
             Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
         }
     }
@@ -1528,7 +1554,7 @@ void VR_HandleControllerInput() {
                     -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
                      +Input::hmd.angleY));
             }
-            else if (pov != ICamera::POV_1ST_PERSON)
+            else if (pov != ICamera::POV_1ST_PERSON && !Core::settings.detail.isChaseCamEnabled())
             {
                 Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
             }
@@ -1544,7 +1570,7 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (pov == ICamera::POV_1ST_PERSON)
+    if (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.isChaseCamEnabled())
     {
         if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
         {
@@ -1574,14 +1600,10 @@ void VR_HandleControllerInput() {
     bool twoHandShotgun = false;
     if (lara && !inventory->isActive())
     {
-        if (lara->emptyHands())
+        if (lara->emptyHands() || pov != ICamera::POV_1ST_PERSON || Core::settings.detail.autoaim)
         {
             //with empty hands left or right trigger is action
             Input::setJoyDown(joyRight, jkA, actionPressed);
-
-            //Walk
-            Input::setDown(ikShift, walkingEnabled & 1);
-
         }
         else
         {
@@ -1589,25 +1611,10 @@ void VR_HandleControllerInput() {
             bool holster = rightTrackedRemoteState_new.Buttons & xrButton_B;
             Input::setJoyDown(joyLeft, jkA, !holster && (leftTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0));
             Input::setJoyDown(joyRight, jkA, !holster && (rightTrackedRemoteState_new.IndexTrigger > 0.4f ? 1 : 0));
-
-            //See if we should be trying to two hand the shotgun
-            /*        if (((Lara*)inventory->game->getLara())->wpnCurrent == TR::Entity::SHOTGUN)
-                    {
-                        vec3 dir = (Core::settings.detail.handedness == 0 ? vrRightControllerOrientation : vrLeftControllerOrientation) * vec3(0, 1, 0);
-                        if ((Core::settings.detail.handedness == 0 ? leftTrackedRemoteState_new.GripTrigger : rightTrackedRemoteState_new.GripTrigger) > 0.4f)// &&
-                            dir.dot((vrRightControllerPosition - vrLeftControllerPosition).normal()) > 0.5f)
-                        {
-                            twoHandShotgun = true;
-                        }
-                    }
-                    else */
-            {
-                //Walk
-                Input::setDown(ikShift, walkingEnabled & 1);
-                //Input::hmd.state[cWalk] = walkingEnabled;
-                //Input::setJoyDown(joyRight, jkRB, walkingEnabled ? 1 : 0);
-            }
         }
+
+        //Walk
+        Input::setDown(ikShift, walkingEnabled & 1);
 
         //Jump
         Input::setJoyDown(joyRight, jkX, AButtonActive && (rightTrackedRemoteState_new.Buttons & xrButton_A));
@@ -1643,7 +1650,6 @@ void VR_HandleControllerInput() {
                 rightTrackedRemoteState_old.GripTrigger > 0.4f))
         {
             inventory->toggle(0, Inventory::PAGE_INVENTORY);
-            Input::hmd.forceUpdatePose = true;
         }
     }
 
@@ -1737,7 +1743,6 @@ void VR_HandleControllerInput() {
             {
                 inventory->toggle(0, Inventory::PAGE_OPTION, TR::Entity::INV_PASSPORT);
                 allowSaveLoad = false;
-                Input::hmd.forceUpdatePose = true;
             }
         }
     }

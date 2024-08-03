@@ -72,8 +72,10 @@ const char *STR_FR[] = { ""
     , "Ombres"
     , "Eau"
     , "VSync"
-    , "St)er)eo"
-    , "Objets Simples"
+    , "Dominant Hand"
+    , "Chase Cam"
+    , "Turn Mode"
+    , "1st Person Auto Aim"
     , "Resolution"
     , STR_SCALE
 // sound options

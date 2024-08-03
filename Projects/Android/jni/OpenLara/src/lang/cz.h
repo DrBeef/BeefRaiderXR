@@ -72,8 +72,10 @@ const char *STR_CZ[] = { ""
     , "St)iny"
     , "Voda"
     , "VSync"
-        , "Dominant Hand"
-        , "Turn Mode"
+    , "Dominant Hand"
+    , "Chase Cam"
+    , "Turn Mode"
+    , "1st Person Auto Aim"
     , "Rozli{sen)i"
     , STR_SCALE
 // sound options

@@ -272,7 +272,7 @@ namespace Core {
     #endif
     } support;
 
-#define SETTINGS_VERSION 7
+#define SETTINGS_VERSION 8
 #define SETTINGS_READING 0xFF
 
     struct Settings {
@@ -302,6 +302,8 @@ namespace Core {
 
             uint8 handedness;
             uint8 turnmode;
+            uint8 chasecam;
+            uint8 autoaim;
             uint8 braid;
             uint8 firstPersonIKBody;
 
@@ -313,6 +315,11 @@ namespace Core {
             uint8 auto3rdPerson;
             uint8 toyModeEnabled;
             uint8 mixedRealityMode;
+
+            bool isChaseCamEnabled()
+            {
+                return chasecam && !mixedRealityMode;
+            }
 
             void setFilter(Quality value) {
                 if (value > MEDIUM && !(support.maxAniso > 1))
@@ -898,7 +905,9 @@ namespace Core {
 
         settings.detail.braid = 1;
         settings.detail.handedness = 0;
-        settings.detail.turnmode = 1;
+        settings.detail.chasecam = 0;
+        settings.detail.turnmode = 0;
+        settings.detail.autoaim = 0;
         settings.detail.pointOfViewMode = 1;
         settings.detail.auto3rdPerson = 1;
         settings.detail.toyModeEnabled = 1;

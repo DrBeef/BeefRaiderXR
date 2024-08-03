@@ -72,8 +72,10 @@ const char *STR_PL[] = { ""
     , "Jako)s)c cieni"
     , "Jako)s)c wody"
     , "VSync"
-    , "Stereoskopia"
-    , "Proste przedmioty"
+    , "Dominant Hand"
+    , "Chase Cam"
+    , "Turn Mode"
+    , "1st Person Auto Aim"
     , "Resolution"
     , STR_SCALE
 // sound options

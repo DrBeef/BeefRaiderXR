@@ -226,9 +226,41 @@ struct Camera : ICamera {
 
     bool updateVRPointOfView() {
         Basis &joint = owner->getJoint(owner->jointHead);
-
-        int povOffset = 0;
         PointOfView pov = getPointOfView();
+
+        static float povOffset = 128.0f;
+        int targetOffset = 0;
+        float offsetMult = 1.1f;
+        if (owner->getItemHands() != TR::Entity::NONE)
+        {
+            offsetMult = 1.5f;
+        }
+
+        if (pov == POV_1ST_PERSON)
+        {
+            targetOffset = 128.0f;
+        }
+        else if (pov == POV_3RD_PERSON_VR_TOY_MODE)
+        {
+            povOffset = targetOffset = 768 * 4 * 1.5f;
+        }
+        else 
+        {
+            targetOffset = 1024 * (pov-1) * offsetMult;
+        }
+        
+        if (pov != POV_3RD_PERSON_VR_TOY_MODE)
+        {
+            if (povOffset < targetOffset)
+            {
+                povOffset += (targetOffset - povOffset) / 25.0f;
+            }
+            else if (povOffset > targetOffset)
+            {
+                povOffset -= (povOffset - targetOffset) / 25.0f;
+            }
+        }
+
         if (mode != MODE_CUTSCENE && pov >= POV_3RD_PERSON_VR_1)
         {
             if (Core::settings.detail.mixedRealityMode)
@@ -238,18 +270,6 @@ struct Camera : ICamera {
             }
             else
             {
-                static float offsetMult = 1.0f;
-                if (owner->getItemHands() != TR::Entity::NONE)
-                {
-                    offsetMult *= 1.03;
-                }
-                else
-                {
-                    offsetMult *= 0.97f;
-                }
-                offsetMult = clamp(offsetMult, 1.f, 2.f);
-
-                povOffset = 384 * pov * (pov == POV_3RD_PERSON_VR_TOY_MODE ? 2.0f : offsetMult);
                 fpHead.pos = owner->getPos();
                 fpHead.pos.y -= 400 + (300 * Input::hmd.extraworldscaler);
                 fpHead.pos -= Input::hmd.body.getRot().inverse() * vec3(0, 48, -40 + povOffset);
@@ -264,7 +284,7 @@ struct Camera : ICamera {
                 targetAngle.x += PI;
                 targetAngle.z = -targetAngle.z;
 
-                vec3 pos = joint.pos - joint.rot * vec3(0, 48, -40 + povOffset);
+                vec3 pos = joint.pos - joint.rot * vec3(0, 48, -40);
                 quat rot = rotYXZ(targetAngle);
 
                 fpHead.pos = pos;
