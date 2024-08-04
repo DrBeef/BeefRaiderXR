@@ -765,7 +765,7 @@ const char *STR_CN[] = { "\x11\x02\x8A\x02\x6C\x01\x54\x03\x02\xFF\xFF"
 
 
         // VR ADDITIONS
-        , "Lara's Braid"
+        , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"
         , "1st / 3rd Person Toggle"
@@ -779,6 +779,9 @@ const char *STR_CN[] = { "\x11\x02\x8A\x02\x6C\x01\x54\x03\x02\xFF\xFF"
         , "Battery Saver"
         , "Fixed Camera Mode"
         , "Draw Detailed Sky"
+        , "Off"
+        , "Modern"
+        , "Classic-ish"
 
 
         //VERSION

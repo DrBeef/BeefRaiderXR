@@ -128,8 +128,8 @@ struct OptionItem {
 static const OptionItem optDetail[] = {
     OptionItem( OptionItem::TYPE_TITLE,  STR_SELECT_DETAIL ),
     OptionItem( ),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_FILTER,   SETTINGS( detail.filter    ), STR_QUALITY_LOW, 0, 2 ),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_LIGHTING, SETTINGS( detail.lighting  ), STR_QUALITY_LOW, 0, 2 ),
+    //OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_FILTER,   SETTINGS( detail.filter    ), STR_QUALITY_LOW, 0, 2 ),
+    //OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_LIGHTING, SETTINGS( detail.lighting  ), STR_QUALITY_LOW, 0, 2 ),
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_SHADOWS,  SETTINGS( detail.shadows   ), STR_QUALITY_LOW, 0, 2 ),
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_WATER,    SETTINGS( detail.water     ), STR_QUALITY_LOW, 0, 2 ),
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_SKY,      SETTINGS( detail.sky    ), STR_OFF, 0, 1),
@@ -143,30 +143,27 @@ static const OptionItem optDetail[] = {
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_VSYNC,    SETTINGS( detail.vsync     ), STR_OFF, 0, 1 ),
 #endif
 #endif
-    OptionItem( ),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HANDEDNESS,   SETTINGS( detail.handedness    ), STR_RIGHT_HANDED, 0, 1),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 3),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_CHASECAM,   SETTINGS( detail.chasecam), STR_OFF, 0, 1),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_AUTOAIM,   SETTINGS( detail.autoaim), STR_OFF, 0, 1),
-
-    //Braid On/Off
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_BRAID,   SETTINGS( detail.braid    ), STR_OFF, 0, 1),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HIDE_IK_BODY,   SETTINGS( detail.firstPersonIKBody), STR_OFF, 0, 1),
-
-    //POV Mode
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_POV,   SETTINGS( detail.pointOfViewMode), STR_OPT_DETAIL_POV_1, 0, 2),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_AUTO_3RD_PERSON,   SETTINGS( detail.auto3rdPerson), STR_OFF, 0, 1),
-
-    //Toy Mode Enabled
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TOY_MODE,   SETTINGS( detail.toyModeEnabled), STR_OFF, 0, 1),
+    OptionItem(),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_CHASECAM,   SETTINGS(detail.chasecam), STR_OPT_CHASE_CAM_OFF, 0, 2),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_POV,   SETTINGS(detail.pointOfViewMode), STR_OPT_DETAIL_POV_1, 0, 2),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_AUTO_3RD_PERSON,   SETTINGS(detail.auto3rdPerson), STR_OFF, 0, 1),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TOY_MODE,   SETTINGS(detail.toyModeEnabled), STR_OFF, 0, 1),
 
 #ifdef ANDROID
     //Mixed Reality
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_MIXED_REALITY,   SETTINGS( detail.mixedRealityMode), STR_MR_OFF, 0, 2),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_MIXED_REALITY,   SETTINGS(detail.mixedRealityMode), STR_MR_OFF, 0, 2),
 #else
     //Fixed Camera
     OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_FIXED_CAMERA,   SETTINGS(detail.mixedRealityMode), STR_OFF, 0, 1),
 #endif
+
+    OptionItem(),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_AUTOAIM,   SETTINGS(detail.autoaim), STR_OFF, 0, 1),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HANDEDNESS,   SETTINGS( detail.handedness    ), STR_RIGHT_HANDED, 0, 1),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 3),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_INVERT_STICK_SWIMMING,   SETTINGS( detail.invertstickswimming), STR_OFF, 0, 1),
+    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HIDE_IK_BODY,   SETTINGS( detail.firstPersonIKBody), STR_OFF, 0, 1),
+
 
     /* Removed the VR option selection since it is always VR */
 #if 0

@@ -356,7 +356,7 @@ const char *STR_EN[] = { ""
 
 
 // VR ADDITIONS
-        , "Lara's Braid"
+        , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"
         , "1st / 3rd Person Toggle"
@@ -370,6 +370,9 @@ const char *STR_EN[] = { ""
         , "Battery Saver"
         , "Fixed Camera Mode"
         , "Draw Detailed Sky"
+        , "Off"
+        , "Modern"
+        , "Classic-ish"
 
 //VERSION
         , BEEFRAIDERXR_VERSION

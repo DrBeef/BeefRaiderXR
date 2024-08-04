@@ -254,7 +254,7 @@ enum StringID {
 
 
 // VR ADDITIONS
-    ,STR_OPT_DETAIL_BRAID
+    ,STR_OPT_DETAIL_INVERT_STICK_SWIMMING
     ,STR_OPT_DETAIL_POV
     ,STR_OPT_DETAIL_POV_1
     ,STR_OPT_DETAIL_POV_2
@@ -268,6 +268,9 @@ enum StringID {
     ,STR_MR_BATTERY_SAVER
     ,STR_OPT_DETAIL_FIXED_CAMERA
     ,STR_OPT_DETAIL_SKY
+    ,STR_OPT_CHASE_CAM_OFF
+    ,STR_OPT_CHASE_CAM_MODERN
+    ,STR_OPT_CHASE_CAM_CLASSIC
 
 //VERSION
     ,STR_BEEFRAIDERXR_VERSION
@@ -324,7 +327,7 @@ const char *helpText =
     "DOZY off - Walk@"
     "Free Camera - hold L & R stick";
 
-#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.5.0"
+#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.5.1"
 
 #include "lang/en.h"
 #include "lang/fr.h"

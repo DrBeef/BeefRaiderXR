@@ -600,7 +600,7 @@ const char *STR_JA[] = { "\x11\x02\x70\x01\x97\x01\xD6\xFF\xFF"
 
 
         // VR ADDITIONS
-        , "Lara's Braid"
+        , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"
         , "1st / 3rd Person Toggle"
@@ -614,6 +614,9 @@ const char *STR_JA[] = { "\x11\x02\x70\x01\x97\x01\xD6\xFF\xFF"
         , "Battery Saver"
         , "Fixed Camera Mode"
         , "Draw Detailed Sky"
+        , "Off"
+        , "Modern"
+        , "Classic-ish"
 
 
         //VERSION

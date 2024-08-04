@@ -1255,6 +1255,7 @@ void VR_HandleControllerInput() {
     ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
     bool actionPressed = false;
     bool usingSnapTurn = true;
+    static bool movingBackwards = false;
     if (inventory->game->getLara())
     {
         lara = (Lara*)inventory->game->getLara();
@@ -1278,12 +1279,17 @@ void VR_HandleControllerInput() {
         * 
         * Roll Reverse Direction
         * Back Hop
+        * Backwards off a ledge
         * 
         */
-        {
+        {            
             static bool reversed = false;
+
+            bool movingBackwards = Input::hmd.head.dir().dot(lara->velocity) < 0.f;
+
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN ||
-                lara->animation.index == Lara::ANIM_HOP_BACK)
+                lara->animation.index == Lara::ANIM_HOP_BACK ||
+                (movingBackwards && (Core::settings.detail.getChaseCamMode() || pov == ICamera::POV_1ST_PERSON)))
             {
                 if (!reversed &&
                     lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
@@ -1333,7 +1339,7 @@ void VR_HandleControllerInput() {
             if (spingrab > 1)
             {
                 if ((pov == ICamera::POV_1ST_PERSON && usingSnapTurn) ||
-                    Core::settings.detail.isChaseCamEnabled())
+                    Core::settings.detail.getChaseCamMode())
                 {
                     if (spingrab == (grabcount / 2))
                     {
@@ -1364,6 +1370,8 @@ void VR_HandleControllerInput() {
             }
         }
     }
+
+    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
 
     //If swimming allow either joystick to snap/smooth turn you
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
@@ -1423,9 +1431,6 @@ void VR_HandleControllerInput() {
     int joyRight = 0;
     int joyLeft = 1;
 
-    bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
-
-
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
     if (Core::settings.detail.mixedRealityMode)
     {
@@ -1481,7 +1486,8 @@ void VR_HandleControllerInput() {
         else if (!Core::settings.detail.mixedRealityMode)
         {
             //only pitch controlled in 3rd person
-            Input::setJoyPos(joyRight, jkL, vec2(0, leftTrackedRemoteState_new.Joystick.y));
+            int invert = Core::settings.detail.invertstickswimming ? -1 : 1;
+            Input::setJoyPos(joyRight, jkL, vec2(0, invert * leftTrackedRemoteState_new.Joystick.y));
             if (!actionPressed)
             {
                 Input::hmd.head.setRot(Input::hmd.body.getRot());
@@ -1509,17 +1515,28 @@ void VR_HandleControllerInput() {
         {
             mat4 addMat;
             addMat.identity();
-            float additionalDirAngle = atan2(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
-            addMat.rotateY(-additionalDirAngle);
 
-            if (Core::settings.detail.mixedRealityMode)
+            if (pov != ICamera::POV_1ST_PERSON &&
+                Core::settings.detail.getChaseCamMode() == Core::ChaseCam::CLASSIC)
             {
-                addMat.rotateY(-Input::hmd.angleY );
+                Input::hmd.head.setRot((Input::hmd.body).getRot());
+                Input::setJoyPos(joyRight, jkL, vec2(joy.x, joy.y));
+                walkingEnabled = fabs(joy.x) > 0.6f;
             }
+            else
+            {
+                float additionalDirAngle = atan2(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
+                addMat.rotateY(-additionalDirAngle);
 
-            Input::hmd.head.setRot((addMat * Input::hmd.body).getRot());
+                if (Core::settings.detail.mixedRealityMode)
+                {
+                    addMat.rotateY(-Input::hmd.angleY);
+                }
 
-            Input::setJoyPos(joyRight, jkL, vec2(0, -joy.length()));
+                Input::hmd.head.setRot((addMat * Input::hmd.body).getRot());
+
+                Input::setJoyPos(joyRight, jkL, vec2(0, -joy.length()));
+            }
         }
         else if (laraState == Lara::STATE_RUN ||
             laraState == Lara::STATE_WALK)
@@ -1528,7 +1545,9 @@ void VR_HandleControllerInput() {
             lara->state = Lara::STATE_STOP;
             Input::setJoyPos(joyRight, jkL, vec2(0));
         }
-        else if (laraState == Lara::STATE_STOP)
+        else if (laraState == Lara::STATE_STOP ||
+            laraState == Lara::STATE_SURF_TREAD ||
+            laraState == Lara::STATE_SURF_SWIM)
         {
             Input::setJoyPos(joyRight, jkL, vec2(0));
         }
@@ -1544,9 +1563,9 @@ void VR_HandleControllerInput() {
         if (joy.length() > 0.5f)
         {
             //Calculate which quandrant the thumbstick is pushed (UP/RIGHT/DOWN/LEFT) like a D pad
-            float angle = joy.quadrant() * 90.f;
-            joy.y = cosf(DEG2RAD * angle);
-            joy.x = sinf(DEG2RAD * angle);
+            float angle = joy.quadrant() * PIH;
+            joy.y = cosf(angle);
+            joy.x = sinf(angle);
 
             if (Core::settings.detail.mixedRealityMode)
             {
@@ -1554,7 +1573,7 @@ void VR_HandleControllerInput() {
                     -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
                      +Input::hmd.angleY));
             }
-            else if (pov != ICamera::POV_1ST_PERSON && !Core::settings.detail.isChaseCamEnabled())
+            else if (pov != ICamera::POV_1ST_PERSON && !Core::settings.detail.getChaseCamMode())
             {
                 Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
             }
@@ -1570,7 +1589,7 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.isChaseCamEnabled())
+    if (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.getChaseCamMode())
     {
         if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
         {
@@ -1876,6 +1895,8 @@ void VR_HandleControllerInput() {
     cL = scaleBasis * cL * scaleBasis.inverse();
     Input::hmd.controllers[1] = cL;
 
+    //Calc this here for the next frame
+    movingBackwards = Input::hmd.head.getRot().dot(Input::hmd.body.getRot()) < 0.5f;
 
 
     //keep old state

@@ -719,7 +719,7 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
 
 
         // VR ADDITIONS
-        , "Lara's Braid"
+        , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"
         , "1st / 3rd Person Toggle"
@@ -733,6 +733,9 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
         , "Battery Saver"
         , "Fixed Camera Mode"
         , "Draw Detailed Sky"
+        , "Off"
+        , "Modern"
+        , "Classic-ish"
 
 
         //VERSION

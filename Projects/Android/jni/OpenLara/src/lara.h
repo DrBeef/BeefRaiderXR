@@ -849,7 +849,7 @@ struct Lara : Character {
             {
                 //Use body direction for the animated torso
                 vec3 ang = angle;
-                if (getCameraPOV() == ICamera::POV_1ST_PERSON || Core::settings.detail.isChaseCamEnabled())
+                if (getCameraPOV() == ICamera::POV_1ST_PERSON || Core::settings.detail.getChaseCamMode())
                 {
                     ang = getAngleAbs(Input::hmd.body.dir().xyz());
                 }
@@ -4236,7 +4236,7 @@ struct Lara : Character {
         visibleMask = visMask;
 
         for (int i = 0; i < COUNT(braid); i++) {
-            if (braid[i] && Core::settings.detail.braid) {
+            if (braid[i]) {
                 braid[i]->render(mesh);
             }
         }

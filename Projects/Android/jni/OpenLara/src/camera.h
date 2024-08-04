@@ -230,7 +230,7 @@ struct Camera : ICamera {
 
         static float povOffset = 128.0f;
         int targetOffset = 0;
-        float offsetMult = 1.1f;
+        float offsetMult = 1.0f;
         if (owner->getItemHands() != TR::Entity::NONE)
         {
             offsetMult = 1.5f;
@@ -246,7 +246,7 @@ struct Camera : ICamera {
         }
         else 
         {
-            targetOffset = 1024 * (pov-1) * offsetMult;
+            targetOffset = 512 * pov * offsetMult;
         }
         
         if (pov != POV_3RD_PERSON_VR_TOY_MODE)
