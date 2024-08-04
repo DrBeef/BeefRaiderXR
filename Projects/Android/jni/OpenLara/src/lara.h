@@ -95,6 +95,8 @@ struct Lara : Character {
         ANIM_BACK               = 41,
         ANIM_CLIMB_3            = 42,
 
+        ANIM_TURNING_RIGHT      = 44,
+
         ANIM_CLIMB_2            = 50,
 
         ANIM_SMASH_RUN_LEFT     = 53,
@@ -107,6 +109,8 @@ struct Lara : Character {
         ANIM_WALK_DESCEND_LEFT  = 60,
         ANIM_BACK_DESCEND_LEFT  = 61,
         ANIM_BACK_DESCEND_RIGHT = 62,
+
+        ANIM_TURNING_LEFT       = 69,
 
         ANIM_SLIDE_FORTH        = 70,
 
@@ -3471,7 +3475,7 @@ struct Lara : Character {
 
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
             if (!(input & JUMP) && !(input & WALK) && !inventory->isActive() && (isFirstPerson || stand != STAND_UNDERWATER)) {
-                input &= ~(LEFT | RIGHT);
+                //input &= ~(LEFT | RIGHT);
             }
 
             vec3 ang;

@@ -1274,6 +1274,14 @@ void VR_HandleControllerInput() {
                 rightTrackedRemoteState_new.IndexTrigger) > 0.5f;
         }
 
+        //Claculate if Lara is actually moving backwards
+        vec3 headDir = Input::hmd.head.dir().xyz();
+        headDir.y = 0;
+        headDir.x *= -1;
+        vec3 velDir = lara->velocity;
+        velDir.y = 0;
+        bool movingBackwards = headDir.dot(velDir) < 0.f;
+
         /*
         * Prevent triggering spingrab during certain animations:
         * 
@@ -1285,7 +1293,6 @@ void VR_HandleControllerInput() {
         {            
             static bool reversed = false;
 
-            bool movingBackwards = Input::hmd.head.dir().dot(lara->velocity) < 0.f;
 
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN ||
                 lara->animation.index == Lara::ANIM_HOP_BACK ||
@@ -1372,6 +1379,10 @@ void VR_HandleControllerInput() {
     }
 
     bool walkingEnabled = leftTrackedRemoteState_new.GripTrigger > 0.4f;
+    bool turning = false;
+
+    int joyRight = 0;
+    int joyLeft = 1;
 
     //If swimming allow either joystick to snap/smooth turn you
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
@@ -1384,8 +1395,11 @@ void VR_HandleControllerInput() {
     if (!inventory->isActive() && 
         laraState != Lara::STATE_DEATH &&
         laraState != Lara::STATE_PULL_BLOCK &&
-        laraState != Lara::STATE_PUSH_BLOCK
-        && !Core::settings.detail.mixedRealityMode)
+        laraState != Lara::STATE_PUSH_BLOCK &&
+        laraState != Lara::STATE_HANG &&
+        laraState != Lara::STATE_HANG_LEFT &&
+        laraState != Lara::STATE_HANG_RIGHT &&
+        !Core::settings.detail.mixedRealityMode)
     {
         vec2 rjoy(joystick.x, joystick.y);
         int sect = rjoy.sector(8);
@@ -1425,11 +1439,16 @@ void VR_HandleControllerInput() {
             {
                 Input::hmd.nextrot += PI2;
             }
+
+            if (lara->state == Lara::STATE_STOP ||
+                lara->state == Lara::STATE_TURN_LEFT ||
+                lara->state == Lara::STATE_TURN_RIGHT)
+            {
+                Input::setJoyPos(joyRight, jkL, vec2(rightTrackedRemoteState_new.Joystick.x, 0));
+                turning = true;
+            }
         }
     }
-
-    int joyRight = 0;
-    int joyLeft = 1;
 
     vec2 joy(leftTrackedRemoteState_new.Joystick.x, leftTrackedRemoteState_new.Joystick.y);
     if (Core::settings.detail.mixedRealityMode)
@@ -1549,7 +1568,10 @@ void VR_HandleControllerInput() {
             laraState == Lara::STATE_SURF_TREAD ||
             laraState == Lara::STATE_SURF_SWIM)
         {
-            Input::setJoyPos(joyRight, jkL, vec2(0));
+            if (!turning)
+            {
+                Input::setJoyPos(joyRight, jkL, vec2(0));
+            }
         }
     }
     // If the user simply pressed the thumbstick in a particular direction that isn't forward
@@ -1585,7 +1607,10 @@ void VR_HandleControllerInput() {
         }
         else
         {
-            Input::setJoyPos(joyRight, jkL, vec2(0));
+            if (!turning)
+            {
+                Input::setJoyPos(joyRight, jkL, vec2(0));
+            }
         }
     }
 
