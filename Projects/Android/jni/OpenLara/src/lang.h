@@ -82,7 +82,7 @@ enum StringID {
     , STR_OPT_DETAIL_WATER
     , STR_OPT_DETAIL_VSYNC
     , STR_OPT_DETAIL_HANDEDNESS
-    , STR_OPT_DETAIL_CHASECAM
+    , STR_OPT_DETAIL_CAM_MODE
     , STR_OPT_DETAIL_TURNMODE
     , STR_OPT_DETAIL_AUTOAIM
     , STR_OPT_RESOLUTION
@@ -268,7 +268,7 @@ enum StringID {
     ,STR_MR_BATTERY_SAVER
     ,STR_OPT_DETAIL_FIXED_CAMERA
     ,STR_OPT_DETAIL_SKY
-    ,STR_OPT_CHASE_CAM_OFF
+    ,STR_OPT_CAM_MODE_MODERN
     ,STR_OPT_CHASE_CAM_MODERN
     ,STR_OPT_CHASE_CAM_CLASSIC
 
@@ -327,7 +327,7 @@ const char *helpText =
     "DOZY off - Walk@"
     "Free Camera - hold L & R stick";
 
-#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.5.2"
+#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.5.3"
 
 #include "lang/en.h"
 #include "lang/fr.h"

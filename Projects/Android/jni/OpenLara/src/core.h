@@ -229,10 +229,10 @@ enum RenderTargetOp {
 
 namespace Core {
 
-    enum ChaseCam {
-        OFF,
+    enum CameraMode {
         MODERN,
-        CLASSIC
+        CLASSIC,
+        UNUSED
     };
 
     struct Mutex {
@@ -308,7 +308,7 @@ namespace Core {
 
             uint8 handedness;
             uint8 turnmode;
-            uint8 chasecam;
+            uint8 cameramode;
             uint8 autoaim;
             uint8 invertstickswimming;
             uint8 firstPersonIKBody;
@@ -322,13 +322,13 @@ namespace Core {
             uint8 toyModeEnabled;
             uint8 mixedRealityMode;
 
-            ChaseCam getChaseCamMode()
+            CameraMode getCameraModeMode()
             {
-                if (chasecam && !mixedRealityMode)
+                if (cameramode && !mixedRealityMode)
                 {
-                    return (ChaseCam)chasecam;
+                    return (CameraMode)cameramode;
                 }
-                return ChaseCam::OFF;
+                return CameraMode::MODERN;
             }
 
             void setFilter(Quality value) {
@@ -915,7 +915,7 @@ namespace Core {
 
         settings.detail.invertstickswimming = 0;
         settings.detail.handedness = 0;
-        settings.detail.chasecam = 0;
+        settings.detail.cameramode = 0;
         settings.detail.turnmode = 0;
         settings.detail.autoaim = 0;
         settings.detail.pointOfViewMode = 1;

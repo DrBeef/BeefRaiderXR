@@ -144,7 +144,7 @@ static const OptionItem optDetail[] = {
 #endif
 #endif
     OptionItem(),
-    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_CHASECAM,   SETTINGS(detail.chasecam), STR_OPT_CHASE_CAM_OFF, 0, 2),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_CAM_MODE,   SETTINGS(detail.cameramode), STR_OPT_CAM_MODE_MODERN, 0, 1),
     OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_POV,   SETTINGS(detail.pointOfViewMode), STR_OPT_DETAIL_POV_1, 0, 2),
     OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_AUTO_3RD_PERSON,   SETTINGS(detail.auto3rdPerson), STR_OFF, 0, 1),
     OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TOY_MODE,   SETTINGS(detail.toyModeEnabled), STR_OFF, 0, 1),

@@ -853,7 +853,7 @@ struct Lara : Character {
             {
                 //Use body direction for the animated torso
                 vec3 ang = angle;
-                if (getCameraPOV() == ICamera::POV_1ST_PERSON || Core::settings.detail.getChaseCamMode())
+                if (getCameraPOV() == ICamera::POV_1ST_PERSON || Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
                 {
                     ang = getAngleAbs(Input::hmd.body.dir().xyz());
                 }
@@ -2233,7 +2233,7 @@ struct Lara : Character {
         //in 3rd person with chase cam or underwater
         if (Core::settings.detail.turnmode == 0 && 
             camera->getPointOfView() != ICamera::POV_1ST_PERSON &&
-            (Core::settings.detail.chasecam || stand == STAND_UNDERWATER))
+            (Core::settings.detail.cameramode || stand == STAND_UNDERWATER))
             ctrlAngle.y = angle.y;
 
         controller->angle = ctrlAngle;
@@ -3474,8 +3474,9 @@ struct Lara : Character {
             bool isFirstPerson = camera->getPointOfView() == ICamera::POV_1ST_PERSON;
 
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
-            if (!(input & JUMP) && !(input & WALK) && !inventory->isActive() && (isFirstPerson || stand != STAND_UNDERWATER)) {
-                //input &= ~(LEFT | RIGHT);
+            if (!(input & JUMP) && !(input & WALK) && !inventory->isActive() && 
+                (isFirstPerson || (stand != STAND_UNDERWATER && Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN))) {
+                input &= ~(LEFT | RIGHT);
             }
 
             vec3 ang;

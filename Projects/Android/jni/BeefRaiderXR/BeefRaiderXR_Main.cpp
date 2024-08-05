@@ -1296,7 +1296,7 @@ void VR_HandleControllerInput() {
 
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN ||
                 lara->animation.index == Lara::ANIM_HOP_BACK ||
-                (movingBackwards && (Core::settings.detail.getChaseCamMode() || pov == ICamera::POV_1ST_PERSON)))
+                (movingBackwards && (Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC || pov == ICamera::POV_1ST_PERSON)))
             {
                 if (!reversed &&
                     lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
@@ -1346,7 +1346,7 @@ void VR_HandleControllerInput() {
             if (spingrab > 1)
             {
                 if ((pov == ICamera::POV_1ST_PERSON && usingSnapTurn) ||
-                    Core::settings.detail.getChaseCamMode())
+                    Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
                 {
                     if (spingrab == (grabcount / 2))
                     {
@@ -1442,7 +1442,8 @@ void VR_HandleControllerInput() {
 
             if (lara->state == Lara::STATE_STOP ||
                 lara->state == Lara::STATE_TURN_LEFT ||
-                lara->state == Lara::STATE_TURN_RIGHT)
+                lara->state == Lara::STATE_TURN_RIGHT ||
+                lara->state == Lara::STATE_FAST_TURN)
             {
                 Input::setJoyPos(joyRight, jkL, vec2(rightTrackedRemoteState_new.Joystick.x, 0));
                 turning = true;
@@ -1457,7 +1458,7 @@ void VR_HandleControllerInput() {
             - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
             + Input::hmd.angleY);
     }
-    else if (pov != ICamera::POV_1ST_PERSON)
+    else if (pov != ICamera::POV_1ST_PERSON && Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN)
     {
         joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
     }
@@ -1536,11 +1537,25 @@ void VR_HandleControllerInput() {
             addMat.identity();
 
             if (pov != ICamera::POV_1ST_PERSON &&
-                Core::settings.detail.getChaseCamMode() == Core::ChaseCam::CLASSIC)
+                Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
             {
                 Input::hmd.head.setRot((Input::hmd.body).getRot());
-                Input::setJoyPos(joyRight, jkL, vec2(joy.x, joy.y));
-                walkingEnabled = fabs(joy.x) > 0.6f;
+                if (joy.quadrant() == 2)
+                {
+                    //Forward - make lara "tilt" by including right thumbstick X value when turning
+                    Input::setJoyPos(joyRight, jkL, vec2(usingSnapTurn ? 0 : rightTrackedRemoteState_new.Joystick.x, joy.y));
+                } 
+                else if (joy.quadrant() % 2 != 0)
+                {
+                    //Sideways
+                    walkingEnabled = fabs(joy.x) > 0.6f;
+                    Input::setJoyPos(joyRight, jkL, vec2(joy.x, 0));
+                }
+                else
+                {
+                    //Back
+                    Input::setJoyPos(joyRight, jkL, vec2(0, joy.y));
+                }
             }
             else
             {
@@ -1595,7 +1610,7 @@ void VR_HandleControllerInput() {
                     -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
                      +Input::hmd.angleY));
             }
-            else if (pov != ICamera::POV_1ST_PERSON && !Core::settings.detail.getChaseCamMode())
+            else if (pov != ICamera::POV_1ST_PERSON && Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN)
             {
                 Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
             }
@@ -1614,7 +1629,7 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.getChaseCamMode())
+    if (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
     {
         if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
         {

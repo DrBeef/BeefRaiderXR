@@ -75,7 +75,7 @@ const char *STR_GR[] = { "Ελληνικά"
     , "Νερό"
     , "VSync"
     , "Dominant Hand"
-    , "Chase Cam"
+    , "Camera Mode"
     , "Turn Mode"
     , "1st Person Auto Aim"
     , "Resolution"
@@ -436,7 +436,7 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
     , "\x11\x01\x27\x01\x05\x01\x07\x01\x13\xFF\xFF"
     , "VSync"
     , "Dominant Hand"
-    , "Chase Cam"
+    , "Camera Mode"
     , "Turn Mode"
     , "1st Person Auto Aim"
     , "Resolution"
@@ -733,9 +733,9 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
         , "Battery Saver"
         , "Fixed Camera Mode"
         , "Draw Detailed Sky"
-        , "Off"
         , "Modern"
         , "Classic-ish"
+        , "Modern - Unused"
 
 
         //VERSION
