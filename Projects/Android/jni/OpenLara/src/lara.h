@@ -24,7 +24,7 @@
 #define TURN_WALL_X_CLAMP   (DEG2RAD * 35.0f)
 
 #define LARA_TILT_SPEED     (DEG2RAD * 37.5f)
-#define LARA_TILT_MAX       (DEG2RAD * 10.0f)
+#define LARA_TILT_MAX       (DEG2RAD * 5.0f)
 
 #define LARA_MAX_HEALTH     1000.0f
 #define LARA_MAX_OXYGEN     60.0f
@@ -853,7 +853,8 @@ struct Lara : Character {
             {
                 //Use body direction for the animated torso
                 vec3 ang = angle;
-                if (getCameraPOV() == ICamera::POV_1ST_PERSON || Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
+                if (getCameraPOV() == ICamera::POV_1ST_PERSON || 
+                    (Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC && getCameraPOV() != ICamera::POV_3RD_PERSON_VR_TOY_MODE))
                 {
                     ang = getAngleAbs(Input::hmd.body.dir().xyz());
                 }

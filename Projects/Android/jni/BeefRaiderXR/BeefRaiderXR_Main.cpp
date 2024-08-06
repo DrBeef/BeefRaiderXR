@@ -1264,8 +1264,8 @@ void VR_HandleControllerInput() {
         pov = lara->camera->getPointOfView();
         static int spingrab = 0;
 
-        usingSnapTurn = Core::settings.detail.turnmode == 0 ||
-            (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON);
+        usingSnapTurn = ((Core::settings.detail.turnmode == 0 && (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN)) ||
+            (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON));
 
         //with empty hands left or right trigger is action
         if (lara->emptyHands() || pov != ICamera::POV_1ST_PERSON || Core::settings.detail.autoaim)
@@ -1440,13 +1440,17 @@ void VR_HandleControllerInput() {
                 Input::hmd.nextrot += PI2;
             }
 
-            if (lara->state == Lara::STATE_STOP ||
-                lara->state == Lara::STATE_TURN_LEFT ||
-                lara->state == Lara::STATE_TURN_RIGHT ||
-                lara->state == Lara::STATE_FAST_TURN)
+            if (!walkingEnabled || fabs(leftTrackedRemoteState_new.Joystick.x) <= 0.01f)
             {
-                Input::setJoyPos(joyRight, jkL, vec2(rightTrackedRemoteState_new.Joystick.x, 0));
-                turning = true;
+                if (lara->state == Lara::STATE_STOP ||
+                    lara->state == Lara::STATE_TURN_LEFT ||
+                    lara->state == Lara::STATE_TURN_RIGHT ||
+                    lara->state == Lara::STATE_FAST_TURN)
+                {
+                    Input::setJoyPos(joyRight, jkL, vec2(rightTrackedRemoteState_new.Joystick.x, 0));
+                    turning = true;
+                    walkingEnabled = false;
+                }
             }
         }
     }
@@ -1490,7 +1494,7 @@ void VR_HandleControllerInput() {
             laraState == Lara::STATE_STEP_RIGHT) &&
         pov != ICamera::POV_1ST_PERSON &&
         (joy.sector(4) != -1) && (joy.sector(4) != 2) &&
-        walkingEnabled)
+        walkingEnabled && !turning)
     {
         int back = joy.sector(4) == 0 ? 1 : 0;
         int side = joy.sector(4) == 1 ? 1 : joy.sector(4) == 3 ? -1 : 0;
@@ -1526,6 +1530,7 @@ void VR_HandleControllerInput() {
             !inventory->active &&
             (laraState == Lara::STATE_STOP ||
               laraState == Lara::STATE_RUN ||
+              laraState == Lara::STATE_FORWARD_JUMP ||
               laraState == Lara::STATE_WALK ||
               laraState == Lara::STATE_SURF_TREAD ||
               laraState == Lara::STATE_SURF_SWIM))
@@ -1536,7 +1541,7 @@ void VR_HandleControllerInput() {
             mat4 addMat;
             addMat.identity();
 
-            if (pov != ICamera::POV_1ST_PERSON &&
+            if (pov != ICamera::POV_1ST_PERSON && pov != ICamera::POV_3RD_PERSON_VR_TOY_MODE &&
                 Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
             {
                 Input::hmd.head.setRot((Input::hmd.body).getRot());
@@ -1629,7 +1634,8 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
+    if (pov == ICamera::POV_1ST_PERSON || 
+        (Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC && pov != ICamera::POV_3RD_PERSON_VR_TOY_MODE))
     {
         if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
         {
