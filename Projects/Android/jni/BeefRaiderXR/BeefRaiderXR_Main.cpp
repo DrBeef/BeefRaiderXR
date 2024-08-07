@@ -1252,7 +1252,7 @@ void VR_HandleControllerInput() {
     int laraState = -1;
     int laraStand = -1;
     int laraAnim = -1;
-    ICamera::PointOfView pov = ICamera::POV_1ST_PERSON;
+    bool pov1stPerson = false, pov3rdPerson = false, povToyMode = false;
     bool actionPressed = false;
     bool usingSnapTurn = true;
     static bool movingBackwards = false;
@@ -1261,11 +1261,14 @@ void VR_HandleControllerInput() {
         lara = (Lara*)inventory->game->getLara();
         laraState = lara->state;
         laraStand = lara->getStand();
-        pov = lara->camera->getPointOfView();
+        ICamera::PointOfView pov = lara->camera->getPointOfView();
+        pov1stPerson = pov == ICamera::POV_1ST_PERSON;
+        pov3rdPerson = pov == ICamera::POV_3RD_PERSON_VR_1 || pov == ICamera::POV_3RD_PERSON_VR_2;
+        povToyMode = pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE;
         static int spingrab = 0;
 
-        usingSnapTurn = ((Core::settings.detail.turnmode == 0 && (pov == ICamera::POV_1ST_PERSON || Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN)) ||
-            (Core::settings.detail.turnmode == 1 && pov == ICamera::POV_1ST_PERSON));
+        usingSnapTurn = ((Core::settings.detail.turnmode == 0 && (!pov3rdPerson || Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN)) ||
+            (Core::settings.detail.turnmode == 1 && pov1stPerson));
 
         //with empty hands left or right trigger is action
         if (lara->emptyHands() || pov != ICamera::POV_1ST_PERSON || Core::settings.detail.autoaim)
@@ -1296,7 +1299,7 @@ void VR_HandleControllerInput() {
 
             if (lara->animation.index == Lara::ANIM_STAND_ROLL_BEGIN ||
                 lara->animation.index == Lara::ANIM_HOP_BACK ||
-                (movingBackwards && (Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC || pov == ICamera::POV_1ST_PERSON)))
+                (movingBackwards && ((pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC) || pov1stPerson)))
             {
                 if (!reversed &&
                     lara->animation.frameIndex > lara->animation.framesCount * 0.8f)
@@ -1345,8 +1348,8 @@ void VR_HandleControllerInput() {
 
             if (spingrab > 1)
             {
-                if ((pov == ICamera::POV_1ST_PERSON && usingSnapTurn) ||
-                    Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
+                if ((pov1stPerson && usingSnapTurn) ||
+                    (pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC))
                 {
                     if (spingrab == (grabcount / 2))
                     {
@@ -1357,7 +1360,7 @@ void VR_HandleControllerInput() {
                 else
                 {
                     float angle = PI / grabcount;
-                    if (pov == ICamera::POV_1ST_PERSON)
+                    if (pov1stPerson)
                     {
                         Input::hmd.nextrot += angle;
                     }
@@ -1387,18 +1390,25 @@ void VR_HandleControllerInput() {
     //If swimming allow either joystick to snap/smooth turn you
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
     if (laraStand == Lara::STAND_UNDERWATER &&
-        (pov == ICamera::POV_1ST_PERSON || !Core::settings.detail.mixedRealityMode))
+        !Core::settings.detail.mixedRealityMode)
     {
         joystick.x += leftTrackedRemoteState_new.Joystick.x;
     }
 
-    if (!inventory->isActive() && 
+    // The following scenarios should prevent the camera from being rotated
+    // - Lara hanging from ledge or pushing block in 1st Person
+    // - Lara hanging from ledge or pushing block  in 3rd person with classic camera mode
+    bool lockCameraRotation = (
+        (laraState == Lara::STATE_HANG || 
+        laraState == Lara::STATE_PULL_BLOCK ||
+        laraState == Lara::STATE_PUSH_BLOCK ||
+        laraState == Lara::STATE_HANG_LEFT || 
+        laraState == Lara::STATE_HANG_RIGHT) &&
+        (pov1stPerson || (pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)));
+
+    if (!lockCameraRotation &&
+        !inventory->isActive() && 
         laraState != Lara::STATE_DEATH &&
-        laraState != Lara::STATE_PULL_BLOCK &&
-        laraState != Lara::STATE_PUSH_BLOCK &&
-        laraState != Lara::STATE_HANG &&
-        laraState != Lara::STATE_HANG_LEFT &&
-        laraState != Lara::STATE_HANG_RIGHT &&
         !Core::settings.detail.mixedRealityMode)
     {
         vec2 rjoy(joystick.x, joystick.y);
@@ -1429,7 +1439,7 @@ void VR_HandleControllerInput() {
         }
         else if (rjoy.length() > 0.5f && (sect == 2 || sect == 6)) //smooth turn
         {
-            int speed = Core::settings.detail.turnmode == 1 ? 1 : (Core::settings.detail.turnmode - 1);
+            int speed = (Core::settings.detail.turnmode < 3) ? 1 : 2;
             Input::hmd.nextrot -= ((speed * joystick.x) * DEG2RAD);
             if (Input::hmd.nextrot > PI)
             {
@@ -1440,7 +1450,9 @@ void VR_HandleControllerInput() {
                 Input::hmd.nextrot += PI2;
             }
 
-            if (!walkingEnabled || fabs(leftTrackedRemoteState_new.Joystick.x) <= 0.01f)
+            //We only want Lara to do the in-place rotation animation when in classic camera mode 3rd person (not toy mode)
+            if ((pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC) &&
+                (!walkingEnabled || fabs(leftTrackedRemoteState_new.Joystick.x) <= 0.01f))
             {
                 if (lara->state == Lara::STATE_STOP ||
                     lara->state == Lara::STATE_TURN_LEFT ||
@@ -1449,6 +1461,7 @@ void VR_HandleControllerInput() {
                 {
                     Input::setJoyPos(joyRight, jkL, vec2(rightTrackedRemoteState_new.Joystick.x, 0));
                     turning = true;
+                    //Disable walking so Lara doesn't side step
                     walkingEnabled = false;
                 }
             }
@@ -1462,7 +1475,7 @@ void VR_HandleControllerInput() {
             - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
             + Input::hmd.angleY);
     }
-    else if (pov != ICamera::POV_1ST_PERSON && Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN)
+    else if (povToyMode || (pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN))
     {
         joy = vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) - Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y);
     }
@@ -1474,7 +1487,7 @@ void VR_HandleControllerInput() {
     int sector = joy.sector(2);
 
     //Allow Lara to hop back if holding guns (3rd person only)
-    if (pov != ICamera::POV_1ST_PERSON &&
+    if (!pov1stPerson &&
         (laraState == Lara::STATE_STOP || laraState == Lara::STATE_FAST_BACK) &&
         joy.quadrant() == 0 &&
         lara && !lara->emptyHands())
@@ -1487,12 +1500,12 @@ void VR_HandleControllerInput() {
     {
         Input::setJoyPos(joyRight, jkL, vec2(0, 1));
     }
-    //Trigger walking back or side stepping from a stopped position
+    //Trigger walking back or side stepping from a stopped position (3rd person only)
     else if ((laraState == Lara::STATE_STOP ||
             laraState == Lara::STATE_BACK ||
             laraState == Lara::STATE_STEP_LEFT ||
             laraState == Lara::STATE_STEP_RIGHT) &&
-        pov != ICamera::POV_1ST_PERSON &&
+        !pov1stPerson &&
         (joy.sector(4) != -1) && (joy.sector(4) != 2) &&
         walkingEnabled && !turning)
     {
@@ -1502,7 +1515,7 @@ void VR_HandleControllerInput() {
     }
     else if (laraStand == Lara::STAND_UNDERWATER)
     {
-        if (pov == ICamera::POV_1ST_PERSON)
+        if (pov1stPerson)
         {
             Input::hmd.head.setRot(Input::hmd.body.getRot());
             Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
@@ -1525,7 +1538,7 @@ void VR_HandleControllerInput() {
     }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
     // is pressing the thumbstick like a modern game
-    else if ((!actionPressed || pov != ICamera::POV_1ST_PERSON) &&
+    else if ((!actionPressed || !pov1stPerson) &&
             (Game::level && !Game::level->level.isCutsceneLevel()) &&
             !inventory->active &&
             (laraState == Lara::STATE_STOP ||
@@ -1541,8 +1554,7 @@ void VR_HandleControllerInput() {
             mat4 addMat;
             addMat.identity();
 
-            if (pov != ICamera::POV_1ST_PERSON && pov != ICamera::POV_3RD_PERSON_VR_TOY_MODE &&
-                Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
+            if (pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC)
             {
                 Input::hmd.head.setRot((Input::hmd.body).getRot());
                 if (joy.quadrant() == 2)
@@ -1615,7 +1627,7 @@ void VR_HandleControllerInput() {
                     -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y
                      +Input::hmd.angleY));
             }
-            else if (pov != ICamera::POV_1ST_PERSON && Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN)
+            else if (povToyMode || (pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::MODERN))
             {
                 Input::setJoyPos(joyRight, jkL, vec2(joy.x, -joy.y).rotate(-(Input::hmd.extrarot2) -Controller::getAngleAbs(Input::hmd.head.dir().xyz()).y));
             }
@@ -1634,8 +1646,8 @@ void VR_HandleControllerInput() {
         }
     }
 
-    if (pov == ICamera::POV_1ST_PERSON || 
-        (Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC && pov != ICamera::POV_3RD_PERSON_VR_TOY_MODE))
+    if (pov1stPerson ||
+        (pov3rdPerson && Core::settings.detail.getCameraModeMode() == Core::CameraMode::CLASSIC))
     {
         if (laraState == Lara::STATE_STOP || laraState == Lara::STATE_DEATH)
         {
@@ -1665,7 +1677,7 @@ void VR_HandleControllerInput() {
     bool twoHandShotgun = false;
     if (lara && !inventory->isActive())
     {
-        if (lara->emptyHands() || pov != ICamera::POV_1ST_PERSON || Core::settings.detail.autoaim)
+        if (lara->emptyHands() || !pov1stPerson || Core::settings.detail.autoaim)
         {
             //with empty hands left or right trigger is action
             Input::setJoyDown(joyRight, jkA, actionPressed);
@@ -1844,7 +1856,7 @@ void VR_HandleControllerInput() {
 
     if (!Core::settings.detail.mixedRealityMode)
     {
-        Input::hmd.extraworldscaler = pov == ICamera::POV_3RD_PERSON_VR_TOY_MODE ? 12.0f : 1.0f;
+        Input::hmd.extraworldscaler = povToyMode ? 12.0f : 1.0f;
     }
 
     if (cheatsEnabled)
