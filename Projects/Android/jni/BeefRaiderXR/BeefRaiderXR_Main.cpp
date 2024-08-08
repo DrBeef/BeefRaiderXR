@@ -1390,7 +1390,7 @@ void VR_HandleControllerInput() {
     //If swimming allow either joystick to snap/smooth turn you
     XrVector2f joystick = rightTrackedRemoteState_new.Joystick;
     if (laraStand == Lara::STAND_UNDERWATER &&
-        !Core::settings.detail.mixedRealityMode)
+        !Core::settings.detail.mixedRealityMode && !povToyMode)
     {
         joystick.x += leftTrackedRemoteState_new.Joystick.x;
     }
@@ -1515,15 +1515,15 @@ void VR_HandleControllerInput() {
     }
     else if (laraStand == Lara::STAND_UNDERWATER)
     {
+        //only pitch controlled in 3rd person
+        int invert = Core::settings.detail.invertstickswimming ? -1 : 1;
         if (pov1stPerson)
         {
             Input::hmd.head.setRot(Input::hmd.body.getRot());
             Input::setJoyPos(joyRight, jkL, vec2(0, -leftTrackedRemoteState_new.Joystick.y));
         }
-        else if (!Core::settings.detail.mixedRealityMode)
+        else if (!Core::settings.detail.mixedRealityMode && !povToyMode)
         {
-            //only pitch controlled in 3rd person
-            int invert = Core::settings.detail.invertstickswimming ? -1 : 1;
             Input::setJoyPos(joyRight, jkL, vec2(0, invert * leftTrackedRemoteState_new.Joystick.y));
             if (!actionPressed)
             {
@@ -1532,8 +1532,8 @@ void VR_HandleControllerInput() {
         }
         else
         {
-            //Fully joystick controlled for MR mode
-            Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, -leftTrackedRemoteState_new.Joystick.y));
+            //Fully joystick controlled for MR mode and toy mode
+            Input::setJoyPos(joyRight, jkL, vec2(leftTrackedRemoteState_new.Joystick.x, invert * leftTrackedRemoteState_new.Joystick.y));
         }
     }
     // Once we're standing still or we've entered the walking or running state we then move in the direction the user
@@ -1718,13 +1718,14 @@ void VR_HandleControllerInput() {
         }
     }
 
+    const auto INVENTORY_GRIP_THRESHOLD = 0.8f;
     if (!Core::settings.detail.mixedRealityMode &&
         !Game::level->level.isTitle())
     {
-        if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > 0.4f &&
-            rightTrackedRemoteState_old.GripTrigger <= 0.4f) ||
-            ((inventory->isActive() || inventory->phaseRing > 0.f) && rightTrackedRemoteState_new.GripTrigger <= 0.4f &&
-                rightTrackedRemoteState_old.GripTrigger > 0.4f))
+        if ((!inventory->isActive() && rightTrackedRemoteState_new.GripTrigger > INVENTORY_GRIP_THRESHOLD &&
+            rightTrackedRemoteState_old.GripTrigger <= INVENTORY_GRIP_THRESHOLD) ||
+            ((inventory->isActive() || inventory->phaseRing > 0.f) && rightTrackedRemoteState_new.GripTrigger <= INVENTORY_GRIP_THRESHOLD &&
+                rightTrackedRemoteState_old.GripTrigger > INVENTORY_GRIP_THRESHOLD))
         {
             inventory->toggle(0, Inventory::PAGE_INVENTORY);
         }

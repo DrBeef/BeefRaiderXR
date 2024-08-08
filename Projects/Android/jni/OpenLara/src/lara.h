@@ -3473,6 +3473,7 @@ struct Lara : Character {
             canFreeRotate()) {
 
             bool isFirstPerson = camera->getPointOfView() == ICamera::POV_1ST_PERSON;
+            bool isToyMode = camera->getPointOfView() == ICamera::POV_3RD_PERSON_VR_TOY_MODE;
 
             //Changed from original OpenLara code, before it removed LEFT / RIGHT if walk not enabled
             if (!(input & JUMP) && !(input & WALK) && !inventory->isActive() && 
@@ -3482,7 +3483,7 @@ struct Lara : Character {
 
             vec3 ang;
             ang = getAngleAbs(Input::hmd.head.dir().xyz());
-            if (isFirstPerson || (stand == STAND_UNDERWATER && !Core::settings.detail.mixedRealityMode) || stand != STAND_UNDERWATER)
+            if (isFirstPerson || (stand == STAND_UNDERWATER && !Core::settings.detail.mixedRealityMode && !isToyMode) || stand != STAND_UNDERWATER)
             {
                 angle.y = ang.y;
             }
