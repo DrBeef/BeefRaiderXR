@@ -307,6 +307,7 @@ namespace Core {
             uint8 stereo;
 
             uint8 handedness;
+            uint8 switchsticks;
             uint8 turnmode;
             uint8 cameramode;
             uint8 autoaim;
@@ -914,6 +915,7 @@ namespace Core {
         settings.detail.sky          = true;
 
         settings.detail.invertstickswimming = 0;
+        settings.detail.switchsticks = 0;
         settings.detail.handedness = 0;
         settings.detail.cameramode = 0;
         settings.detail.turnmode = 0;

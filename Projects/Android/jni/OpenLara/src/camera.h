@@ -261,7 +261,9 @@ struct Camera : ICamera {
             }
         }
 
-        if (mode != MODE_CUTSCENE && pov >= POV_3RD_PERSON_VR_1)
+        //Removing the following fixes the midas gold death scene being forced to
+        //1st person, not sure if there will be any unintended consequences
+        if (/*mode != MODE_CUTSCENE && */pov >= POV_3RD_PERSON_VR_1)
         {
             if (Core::settings.detail.mixedRealityMode)
             {

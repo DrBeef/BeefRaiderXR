@@ -1243,6 +1243,11 @@ void VR_HandleControllerInput() {
         rightRemoteTracking_new.GripPose.orientation.z,
         rightRemoteTracking_new.GripPose.orientation.w);
 
+    if (Core::settings.detail.switchsticks)
+    {
+        swap(rightTrackedRemoteState_new.Joystick, leftTrackedRemoteState_new.Joystick);
+    }
+
     mat4 snapTurnMat;
     snapTurnMat.identity();
     snapTurnMat.rotateY(Input::hmd.extrarot);
