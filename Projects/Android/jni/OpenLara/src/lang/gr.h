@@ -719,6 +719,7 @@ const char *STR_GR[] = { "\x11\x01\x22\x01\x0F\x01\x0F\x01\x0E\x01\x06\x01\x04\x
 
 
         // VR ADDITIONS
+        , "Lara's Braid"
         , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"

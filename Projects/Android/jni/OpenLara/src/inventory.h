@@ -159,10 +159,11 @@ static const OptionItem optDetail[] = {
 
     OptionItem(),
     OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_AUTOAIM,   SETTINGS(detail.autoaim), STR_OFF, 0, 1),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HANDEDNESS,   SETTINGS( detail.handedness    ), STR_RIGHT_HANDED, 0, 1),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 3),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_INVERT_STICK_SWIMMING,   SETTINGS( detail.invertstickswimming), STR_OFF, 0, 1),
-    OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HIDE_IK_BODY,   SETTINGS( detail.firstPersonIKBody), STR_OFF, 0, 1),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HANDEDNESS,   SETTINGS( detail.handedness    ), STR_RIGHT_HANDED, 0, 1),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_TURNMODE,   SETTINGS( detail.turnmode    ), STR_SNAP_TURN, 0, 3),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_INVERT_STICK_SWIMMING,   SETTINGS( detail.invertstickswimming), STR_OFF, 0, 1),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_HIDE_IK_BODY,   SETTINGS( detail.firstPersonIKBody), STR_OFF, 0, 1),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_DETAIL_BRAID,   SETTINGS(detail.braid), STR_OFF, 0, 1),
 
 
     /* Removed the VR option selection since it is always VR */

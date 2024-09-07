@@ -4243,7 +4243,7 @@ struct Lara : Character {
         visibleMask = visMask;
 
         for (int i = 0; i < COUNT(braid); i++) {
-            if (braid[i]) {
+            if (braid[i] && Core::settings.detail.braid) {
                 braid[i]->render(mesh);
             }
         }

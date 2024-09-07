@@ -355,6 +355,7 @@ const char *STR_DE[] = { ""
 
 
         // VR ADDITIONS
+        , "Lara's Braid"
         , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"

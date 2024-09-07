@@ -311,6 +311,7 @@ namespace Core {
             uint8 turnmode;
             uint8 cameramode;
             uint8 autoaim;
+            uint8 braid;
             uint8 invertstickswimming;
             uint8 firstPersonIKBody;
 
@@ -914,6 +915,7 @@ namespace Core {
         settings.detail.scale        = Settings::SCALE_100;
         settings.detail.sky          = true;
 
+        settings.detail.braid = 1;
         settings.detail.invertstickswimming = 0;
         settings.detail.switchsticks = 0;
         settings.detail.handedness = 0;

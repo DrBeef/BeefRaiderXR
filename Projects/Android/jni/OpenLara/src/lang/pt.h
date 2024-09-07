@@ -356,6 +356,7 @@ const char *STR_PT[] = { ""
 
 
         // VR ADDITIONS
+        , "Lara's Braid"
         , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"

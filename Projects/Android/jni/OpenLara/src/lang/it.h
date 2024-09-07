@@ -240,6 +240,7 @@ const char *STR_IT[] = { ""
 
 
         // VR ADDITIONS
+        , "Lara's Braid"
         , "Swim Inverted Stick"
         , "POV Mode"
         , "1st Person"
