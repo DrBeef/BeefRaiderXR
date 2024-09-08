@@ -88,7 +88,7 @@ const char *STR_RU[] = { ""
     , "Субтитры"
     , "Язык"
 // controls options
-    , "Настро{ика управления"
+    , "Game Options"
     , "Клавиатура"
     , "Ге{импад"
     , "Вибрация"
@@ -378,6 +378,11 @@ const char *STR_RU[] = { ""
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 
         //VERSION

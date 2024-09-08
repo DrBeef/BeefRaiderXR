@@ -218,8 +218,12 @@ static const OptionItem optSound[] = {
 #endif
 
 static const OptionItem optControls[] = {
-    OptionItem( OptionItem::TYPE_TITLE,  STR_SET_CONTROLS ),
+    OptionItem( OptionItem::TYPE_TITLE,  STR_SET_GAME_OPTIONS),
     OptionItem( ),
+    OptionItem(OptionItem::TYPE_PARAM,  STR_OPT_GAME_DIFFICULTY , SETTINGS(game.difficulty), STR_OPT_GAME_DIFFICULTY_EASY, 0, 2),
+
+
+    /*
 #ifndef INV_SINGLE_PLAYER
     OptionItem( OptionItem::TYPE_PARAM,  STR_EMPTY                   , SETTINGS( playerIndex                    ), STR_PLAYER_1,  0, 1 ),
     OptionItem( OptionItem::TYPE_PARAM,  STR_OPT_CONTROLS_GAMEPAD    , SETTINGS( controls[0].joyIndex           ), STR_GAMEPAD_1, 0, 3 ),
@@ -250,6 +254,7 @@ static const OptionItem optControls[] = {
     OptionItem( OptionItem::TYPE_KEY,    STR_CTRL_FIRST + cRoll      , SETTINGS( controls[0].keys[ cRoll      ] ), STR_KEY_FIRST ),
     OptionItem( OptionItem::TYPE_KEY,    STR_CTRL_FIRST + cInventory , SETTINGS( controls[0].keys[ cInventory ] ), STR_KEY_FIRST ),
     OptionItem( OptionItem::TYPE_KEY,    STR_CTRL_FIRST + cStart     , SETTINGS( controls[0].keys[ cStart     ] ), STR_KEY_FIRST ),
+    */
 };
 
 static OptionItem optControlsPlayer[COUNT(optControls)];

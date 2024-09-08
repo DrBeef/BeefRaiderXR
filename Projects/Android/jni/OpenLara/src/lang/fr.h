@@ -84,7 +84,7 @@ const char *STR_FR[] = { ""
     , "Sous-titres"
     , "Langue"
 // controls options
-    , "R)egler Controles"
+    , "Game Options"
     , "Clavier"
     , "Gamepad"
     , "Vibration"
@@ -374,6 +374,11 @@ const char *STR_FR[] = { ""
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 
         //VERSION

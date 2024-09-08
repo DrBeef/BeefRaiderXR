@@ -84,7 +84,7 @@ const char *STR_PL[] = { ""
     , "Napisy"
     , "J|ezyk"
 // controls options
-    , "Ustaw sterowanie"
+    , "Game Options"
     , "Klawiatura"
     , "Kontroler"
     , "Wibracje"
@@ -258,6 +258,11 @@ const char *STR_PL[] = { ""
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 
         //VERSION

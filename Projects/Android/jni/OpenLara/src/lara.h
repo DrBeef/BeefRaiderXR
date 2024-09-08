@@ -900,14 +900,22 @@ struct Lara : Character {
     }
 
     float wpnGetDamage() {
+        float damage = 1;
         switch (wpnCurrent) {
-            case TR::Entity::PISTOLS : return 1;
-            case TR::Entity::SHOTGUN : return 1;
-            case TR::Entity::MAGNUMS : return 2;
-            case TR::Entity::UZIS    : return 1;
+            case TR::Entity::MAGNUMS : damage = 2;
             default : ;
         }
-        return 0;
+
+        if (Core::settings.game.difficulty == 0)
+        {
+            damage *= 1.5f;
+        }
+        else if (Core::settings.game.difficulty == 2)
+        {
+            damage *= 0.75f;
+        }
+
+        return damage;
     }
 
     void wpnSetState(Weapon::State wState) {
@@ -1921,6 +1929,18 @@ struct Lara : Character {
         if (health <= 0.0f && hitType != TR::HIT_FALL) return;
 
         damageTime = LARA_DAMAGE_TIME;
+
+        if (hitType != TR::HIT_FALL)
+        {
+            if (Core::settings.game.difficulty == 0)
+            {
+                damage *= 0.5f;
+            }
+            else if (Core::settings.game.difficulty == 2)
+            {
+                damage *= 1.25f;
+            }
+        }
 
         Character::hit(damage, enemy, hitType);
 

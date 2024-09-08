@@ -96,7 +96,7 @@ enum StringID {
     , STR_OPT_SUBTITLES
     , STR_OPT_LANGUAGE
 // controls options
-    , STR_SET_CONTROLS
+    , STR_SET_GAME_OPTIONS
     , STR_OPT_CONTROLS_KEYBOARD
     , STR_OPT_CONTROLS_GAMEPAD
     , STR_OPT_CONTROLS_VIBRATION
@@ -273,6 +273,11 @@ enum StringID {
     ,STR_OPT_CHASE_CAM_MODERN
     ,STR_OPT_CHASE_CAM_CLASSIC
 
+    ,STR_OPT_GAME_DIFFICULTY
+    ,STR_OPT_GAME_DIFFICULTY_EASY
+    ,STR_OPT_GAME_DIFFICULTY_NORMAL
+    ,STR_OPT_GAME_DIFFICULTY_HARD
+
 //VERSION
     ,STR_BEEFRAIDERXR_VERSION
 
@@ -328,7 +333,7 @@ const char *helpText =
     "DOZY off - Walk@"
     "Free Camera - hold L & R stick";
 
-#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.5.6"
+#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.6.1"
 
 #include "lang/en.h"
 #include "lang/fr.h"

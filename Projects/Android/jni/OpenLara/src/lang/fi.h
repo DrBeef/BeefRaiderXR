@@ -84,7 +84,7 @@ const char *STR_FI[] = { "Suomi"
     , "Tekstitykset"
     , "Kieli"
 // controls options
-    , "N~app~aimet"
+    , "Game Options"
     , "N~app~aimist~o"
     , "Ohjain"
     , "V~arin~a"
@@ -374,6 +374,11 @@ const char *STR_FI[] = { "Suomi"
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 
         //VERSION

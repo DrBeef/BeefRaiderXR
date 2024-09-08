@@ -84,7 +84,7 @@ const char *STR_CZ[] = { ""
     , "Titulky"
     , "Jazyk"
 // controls options
-    , "Nastaven)i Ovl)ad)an)i"
+    , "Game Options"
     , "Kl)avesnice"
     , "Gamepad"
     , "Vibrace"
@@ -374,6 +374,11 @@ const char *STR_CZ[] = { ""
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 
         //VERSION

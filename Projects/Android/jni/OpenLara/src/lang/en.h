@@ -49,14 +49,14 @@ const char *STR_EN[] = { ""
     , "Save Game"
     , "Latest Quick/Crystal Save"
 // inventory option
-    , "New/Load/Save Game"
+    , "New/Load/Save/Exit Game"
     , "Map"
     , "Compass"
     , "Statistics"
     , "The Beef Mansion"
     , "VR / Graphics Options"
     , "Sound"
-    , "Controls"
+    , "Game Options"
     , "Gamma"
 // passport menu
     , "Load Game"
@@ -84,7 +84,7 @@ const char *STR_EN[] = { ""
     , "Subtitles"
     , "Language"
 // controls options
-    , "Set Controls"
+    , "Game Options"
     , "Keyboard"
     , "Gamepad"
     , "Vibration"
@@ -374,6 +374,11 @@ const char *STR_EN[] = { ""
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 //VERSION
         , BEEFRAIDERXR_VERSION

@@ -84,7 +84,7 @@ const char *STR_CN[] = { "简体中文"
     , "字幕"
     , "语言"
 // controls options
-    , "操作设定"
+    , "Game Options"
     , "键盘"
     , "手柄"
     , "震动"
@@ -493,7 +493,7 @@ const char *STR_CN[] = { "\x11\x02\x8A\x02\x6C\x01\x54\x03\x02\xFF\xFF"
     , "\x11\x01\x96\x03\xAE\xFF\xFF"
     , "\x11\x03\xB3\x02\xB3\xFF\xFF"
 // controls options
-    , "\x11\x02\x8D\x01\x3C\x02\x89\x01\x68\xFF\xFF"
+    , "Game Options"
     , "\x11\x01\x0D\x02\xAD\xFF\xFF"
     , "\x11\x01\x2F\x01\x9E\xFF\xFF"
     , "\x11\x03\xA7\x01\x2C\xFF\xFF"
@@ -783,6 +783,11 @@ const char *STR_CN[] = { "\x11\x02\x8A\x02\x6C\x01\x54\x03\x02\xFF\xFF"
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 
         //VERSION

@@ -84,7 +84,7 @@ const char *STR_PT[] = { ""
     , "Legendas"
     , "L)ingua"
 // controls options
-    , "Configurar Controles"
+    , "Game Options"
     , "Teclado"
     , "Gamepad"
     , "Vibra|c+ao"
@@ -374,6 +374,11 @@ const char *STR_PT[] = { ""
         , "Modern - VR Adapted"
         , "Classic-ish - Tank"
         , "Modern - Unused"
+
+        , "Game Difficulty"
+        , "Easy"
+        , "Normal"
+        , "Hard"
 
 
         //VERSION

@@ -1417,15 +1417,17 @@ void VR_HandleControllerInput() {
         !Core::settings.detail.mixedRealityMode)
     {
         vec2 rjoy(joystick.x, joystick.y);
-        int sect = rjoy.sector(8);
+        int sect = rjoy.sector(16);
+        bool right = sect >= 3 || sect <= 5;
+        bool left = sect >= 11 || sect <= 13;
         if (usingSnapTurn)
         {
             static int snap = true;
             if (rjoy.length() > 0.7f)
             {
-                if (snap && (sect==2|| sect==6))
+                if (snap && (right || left))
                 {
-                    Input::hmd.nextrot += (sect == 2) ? -PIQ : PIQ;
+                    Input::hmd.nextrot += right ? -PIQ : PIQ;
                     if (Input::hmd.nextrot < -PI)
                     {
                         Input::hmd.nextrot += PI2;
@@ -1442,7 +1444,7 @@ void VR_HandleControllerInput() {
                 snap = true;
             }
         }
-        else if (rjoy.length() > 0.5f && (sect == 2 || sect == 6)) //smooth turn
+        else if (rjoy.length() > 0.5f && (right || left)) //smooth turn
         {
             int speed = (Core::settings.detail.turnmode < 3) ? 1 : 2;
             Input::hmd.nextrot -= ((speed * joystick.x) * DEG2RAD);

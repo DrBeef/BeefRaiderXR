@@ -373,6 +373,10 @@ namespace Core {
         } detail;
 
         struct {
+            uint8 difficulty;
+        } game;
+
+        struct {
             uint8 music;
             uint8 sound;
             uint8 reverb;
@@ -914,6 +918,8 @@ namespace Core {
         settings.detail.stereo       = Settings::STEREO_VR;
         settings.detail.scale        = Settings::SCALE_100;
         settings.detail.sky          = true;
+
+        settings.game.difficulty = 1; // Normal by default
 
         settings.detail.braid = 1;
         settings.detail.invertstickswimming = 0;
