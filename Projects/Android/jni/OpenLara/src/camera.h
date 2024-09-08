@@ -314,6 +314,14 @@ struct Camera : ICamera {
             target.room = owner->getRoomIndex();
             target.pos = getViewPoint();
             traceClip(povOffset, to, false);
+
+            //did we hit something? if so, move back towards origin by 20%
+            if (target.pos != to.pos)
+            {
+                vec3 diff = to.pos - target.pos;
+                diff *= 0.8f;
+                to.pos = target.pos + diff;
+            }
         }        
 
         mViewInv.identity();

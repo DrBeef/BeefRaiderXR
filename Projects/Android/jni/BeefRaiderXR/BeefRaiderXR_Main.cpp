@@ -1418,8 +1418,8 @@ void VR_HandleControllerInput() {
     {
         vec2 rjoy(joystick.x, joystick.y);
         int sect = rjoy.sector(16);
-        bool right = sect >= 3 || sect <= 5;
-        bool left = sect >= 11 || sect <= 13;
+        bool right = sect >= 3 && sect <= 5;
+        bool left = sect >= 11 && sect <= 13;
         if (usingSnapTurn)
         {
             static int snap = true;
