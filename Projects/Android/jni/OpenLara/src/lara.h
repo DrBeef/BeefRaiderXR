@@ -818,7 +818,11 @@ struct Lara : Character {
 
     ICamera::PointOfView getCameraPOV()
     {
-        if (Core::settings.detail.auto3rdPerson)
+        ICamera::PointOfView pov = camera->getPointOfView(true);
+
+        if (Core::settings.detail.auto3rdPerson &&
+            //Only worth switching if we are in 1st person
+            pov == ICamera::POV_1ST_PERSON) 
         {
             if (camera->mode == ICamera::MODE_CUTSCENE ||
                 state == STATE_SWAN_DIVE ||
@@ -838,7 +842,7 @@ struct Lara : Character {
             }
         }
 
-        return camera->getPointOfView(true);
+        return pov;
     }
 
     virtual mat4 getMatrix() {
