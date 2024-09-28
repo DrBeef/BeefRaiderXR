@@ -17,11 +17,12 @@
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+
+	<uses-permission android:name="org.khronos.openxr.permission.OPENXR_SYSTEM" />
 
 
-	<application android:allowBackup="false" 
+	<application android:allowBackup="false"
 		android:icon="@mipmap/teambeef"
 		android:label="@string/beefraiderxr"
 		android:extractNativeLibs="true"
@@ -32,6 +33,7 @@
 		<!-- META QUEST -->
 		<meta-data android:name="com.oculus.supportedDevices" android:value="quest|quest2"/>
 		<meta-data android:name="com.oculus.ossplash" android:value="true"/>
+		<meta-data android:name="com.oculus.vr.focusaware" android:value="true" />
 
 		<!-- Enabling CPU and GPU level trading: 1 = +1 level to gpu, -1 level to cpu -->
 		<meta-data android:name="com.oculus.trade_cpu_for_gpu_amount" android:value="1" />
@@ -40,15 +42,17 @@
 		<meta-data android:name="pvr.app.type" android:value="vr" />
 
 		<activity
-				android:name="com.drbeef.beefraiderxr.GLES3JNIActivity"
-				android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
-				android:launchMode="singleTask"
-				android:screenOrientation="landscape"
-				android:excludeFromRecents="false"
-				android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode">
+			android:exported="true"
+			android:name="com.drbeef.beefraiderxr.GLES3JNIActivity"
+			android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+			android:launchMode="singleTask"
+			android:screenOrientation="landscape"
+			android:excludeFromRecents="false"
+			android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 				<category android:name="android.intent.category.LAUNCHER" />
+				<category android:name="com.oculus.intent.category.VR" />
 			</intent-filter>
 		</activity>
 	</application>
