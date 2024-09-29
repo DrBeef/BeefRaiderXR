@@ -333,7 +333,7 @@ const char *helpText =
     "DOZY off - Walk@"
     "Free Camera - hold L & R stick";
 
-#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 0.6.3"
+#define BEEFRAIDERXR_VERSION    "BeefRaiderXR 1.0.0"
 
 #include "lang/en.h"
 #include "lang/fr.h"
