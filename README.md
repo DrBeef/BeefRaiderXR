@@ -21,9 +21,7 @@ To play the full game you will need to own the original files. You can get Tomb 
 
 To extract the needed files from your Tomb Raider (1969) or Remastered installation, please use our "Beef Raider Extraction Tool". Download it from the Releases area on this repo.
 
-First: Complete the steps above to install the demo and start the game once, then proceed.
-
-1. Unzip the tool to you PC and open it by running SauronDesktop.exe (you may be prompted to install the .Net 7.0 runtime)
+1. Unzip the tool to your PC and open it by running SauronDesktop.exe (you may be prompted to install the .Net 7.0 runtime)
 2. Click "Locate from Steam" to let it automaticaly recognize your Tomb Raider (Steam) install folder or search it manually (GoG).
 3. Once the correct install folder is detected click "Extract Files".
 4. Click "Download Audio Tracks" to download a converted version of the original soundtrack.
