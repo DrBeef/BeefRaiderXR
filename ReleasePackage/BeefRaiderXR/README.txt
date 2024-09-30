@@ -2,7 +2,5 @@
 Welcome to BeefRaiderXR for PCVR devices!
 ==========================================
 
-Follow the standard game assets extraction instructions in the following video and then copy the DATA, FMV and Audio folders into this folder, you can then run BeefRaiderXR by double clicking on the exe.
-
-Video Tutorial: https://youtu.be/yHmELNvs0is
+Use the SauronDesktop.exe utility to extact the game files into this folder before running BeefRaiderXR.exe
 
