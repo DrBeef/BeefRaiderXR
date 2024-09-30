@@ -25,4 +25,6 @@ To extract the needed files from your Tomb Raider (1969) or Remastered installat
 2. Click "Locate from Steam" to let it automaticaly recognize your Tomb Raider (Steam) install folder or search it manually (GoG).
 3. Once the correct install folder is detected click "Extract Files".
 4. Click "Download Audio Tracks" to download a converted version of the original soundtrack.
-5. Navigate to the BeefRaiderXR subfolder and for PCVR run the BeefRaider.exe
+5. Click the "Open Mod Folder" and run BeefRaider.exe.
+
+You should select you default OpenXR runtime (Steam or Meta). Generally if you are using Airlink / Link we recommend Meta. Virtual Desktop / Steam Link / WMR, better to use the Steam OpenXR runtime.
