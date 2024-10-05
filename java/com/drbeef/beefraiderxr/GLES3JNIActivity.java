@@ -160,6 +160,7 @@ import java.util.Vector;
 		//Credits images
 		copy_asset(dir, "CREDITS1.PNG", true);
 		copy_asset(dir, "CREDITS2.PNG", true);
+		copy_asset(dir + "/DATA", "TITLEH.PCX", true);
 
 		if (!new File(dir + "/nocopy").exists())
 		{
