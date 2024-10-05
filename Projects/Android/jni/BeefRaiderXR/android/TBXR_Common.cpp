@@ -79,8 +79,6 @@ const char* const requiredExtensionNames_meta[] = {
         XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME,
         XR_FB_PASSTHROUGH_EXTENSION_NAME};
 
-#define XR_PICO_CONFIGS_EXT_EXTENSION_NAME "XR_PICO_configs_ext"
-
 enum ConfigsEXT
 {
     RENDER_TEXTURE_WIDTH = 0,
@@ -125,17 +123,11 @@ enum ConfigsSetEXT
 	MRC_TEXTURE_ID = 9,
 };
 
-typedef XrResult (XRAPI_PTR *PFN_xrSetConfigPICO) (
-		XrSession                             session,
-		enum ConfigsSetEXT                    configIndex,
-		char *                                configData);
-PFN_xrSetConfigPICO    pfnXrSetConfigPICO;
-
 const char* const requiredExtensionNames_pico[] = {
 		XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME,
 		XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME,
 		XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME,
-		XR_PICO_CONFIGS_EXT_EXTENSION_NAME,
+        XR_BD_CONTROLLER_INTERACTION_EXTENSION_NAME,
         //FB extensions supported by Pico
         XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME,
         XR_FB_PASSTHROUGH_EXTENSION_NAME};
@@ -1571,17 +1563,6 @@ void TBXR_InitRenderer(  ) {
 	for (int eye = 0; eye < ovrMaxNumEyes; eye++) {
 		memset(&gAppState.Views[eye], 0, sizeof(XrView));
         gAppState.Views[eye].type = XR_TYPE_VIEW;
-	}
-
-	if (strstr(gAppState.OpenXRHMD, "pico") != NULL)
-	{
-		xrGetInstanceProcAddr(gAppState.Instance,"xrSetConfigPICO", (PFN_xrVoidFunction*)(&pfnXrSetConfigPICO));
-		xrGetInstanceProcAddr(gAppState.Instance,"xrGetConfigPICO", (PFN_xrVoidFunction*)(&pfnXrGetConfigPICO));
-
-		pfnXrSetConfigPICO(gAppState.Session,TRACKING_ORIGIN,"0");
-		pfnXrSetConfigPICO(gAppState.Session,TRACKING_ORIGIN,"1");
-
-		pfnXrGetConfigPICO(gAppState.Session, GET_DISPLAY_RATE, &gAppState.currentDisplayRefreshRate);
 	}
 
 	int eyeW, eyeH;

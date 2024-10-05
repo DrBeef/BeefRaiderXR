@@ -760,68 +760,6 @@ void TBXR_InitActions( void )
 
     //Pico Devices
     {
-        XrPath picoMixedRealityInteractionProfilePath;
-        CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/interaction_profiles/pico/neo3_controller",
-                                   &picoMixedRealityInteractionProfilePath));
-
-        XrActionSuggestedBinding bindings[128];
-        int currBinding = 0;
-        //Buttons
-        bindings[currBinding++] = ActionSuggestedBinding(XAction, XClickPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(YAction, YClickPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(XTouchAction, XTouchPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(YTouchAction, YTouchPath[SIDE_LEFT]);
-
-        bindings[currBinding++] = ActionSuggestedBinding(AAction, AClickPath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(BAction, BClickPath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(ATouchAction, ATouchPath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(BTouchAction, BTouchPath[SIDE_RIGHT]);
-
-        //Menu Button
-        bindings[currBinding++] = ActionSuggestedBinding(backAction, menuClickPath[SIDE_LEFT]);
-
-        //TRIGGERS
-        bindings[currBinding++] = ActionSuggestedBinding(triggerAction, triggerValuePath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(triggerAction, triggerValuePath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(triggerClickAction, triggerClickPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(triggerClickAction, triggerClickPath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(triggerTouchAction, triggerTouchPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(triggerTouchAction, triggerTouchPath[SIDE_RIGHT]);
-
-        //Thumbstick
-        bindings[currBinding++] = ActionSuggestedBinding(thumbstickAction, thumbstickPosPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(thumbstickAction, thumbstickPosPath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(thumbstickClickAction, thumbstickClickPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(thumbstickClickAction, thumbstickClickPath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(thumbstickTouchAction, thumbstickTouchPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(thumbstickTouchAction, thumbstickTouchPath[SIDE_RIGHT]);
-
-        //Grip
-        bindings[currBinding++] = ActionSuggestedBinding(squeezeAction, squeezeValuePath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(squeezeAction, squeezeValuePath[SIDE_RIGHT]);
-        bindings[currBinding++] = ActionSuggestedBinding(squeezeClickAction, squeezeClickPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(squeezeClickAction, squeezeClickPath[SIDE_RIGHT]);
-
-        bindings[currBinding++] = ActionSuggestedBinding(aimAction, aimPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(aimAction, aimPath[SIDE_RIGHT]);
-
-        bindings[currBinding++] = ActionSuggestedBinding(gripAction, posePath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(gripAction, posePath[SIDE_RIGHT]);
-
-        bindings[currBinding++] = ActionSuggestedBinding(vibrateAction, hapticPath[SIDE_LEFT]);
-        bindings[currBinding++] = ActionSuggestedBinding(vibrateAction, hapticPath[SIDE_RIGHT]);
-
-        XrInteractionProfileSuggestedBinding suggestedBindings = {};
-        suggestedBindings.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING;
-        suggestedBindings.interactionProfile = picoMixedRealityInteractionProfilePath;
-        suggestedBindings.suggestedBindings = bindings;
-        suggestedBindings.countSuggestedBindings = currBinding;
-        suggestedBindings.next = NULL;
-        result = xrSuggestInteractionProfileBindings(gAppState.Instance, &suggestedBindings);
-        
-    }
-
-    {
         XrPath pico4MixedRealityInteractionProfilePath;
         CHECK_XRCMD(xrStringToPath(gAppState.Instance, "/interaction_profiles/bytedance/pico4_controller",
             &pico4MixedRealityInteractionProfilePath));

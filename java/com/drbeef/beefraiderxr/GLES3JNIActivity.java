@@ -10,9 +10,12 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.RemoteException;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -44,22 +47,6 @@ import java.util.Vector;
 	// Load the gles3jni library right away to make sure JNI_OnLoad() gets called as the very first thing.
 	static
 	{
-		BufferedReader br;
-		try {
-			br = new BufferedReader(new FileReader("/sdcard/BeefRaiderXR/commandline.txt"));
-			String s;
-			StringBuilder sb = new StringBuilder(0);
-			while ((s = br.readLine()) != null)
-				sb.append(s + " ");
-			br.close();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 		manufacturer = Build.MANUFACTURER.toLowerCase(Locale.ROOT);
 		if (manufacturer.contains("oculus")) // rename oculus to meta as this will probably happen in the future anyway
 		{
@@ -68,17 +55,6 @@ import java.util.Vector;
 
 		try
 		{
-			//Load manufacturer specific loader
-			if (manufacturer.contains("pico"))
-			{
-				System.loadLibrary("openxr_loader_pico");
-			}
-			else
-			{
-				//Load the open xr loader from the system libraries
-				System.loadLibrary("openxr_loader_meta");
-			}
-
 			setenv("OPENXR_HMD", manufacturer, true);
 		} catch (Exception e)
 		{}
@@ -91,15 +67,13 @@ import java.util.Vector;
 	private static final String APPLICATION = "BeefRaiderXR";
 
 
-	private boolean permissionsGranted = false;
-	private static final int READ_EXTERNAL_STORAGE_PERMISSION_ID = 1;
-	private static final int WRITE_EXTERNAL_STORAGE_PERMISSION_ID = 2;
-
 	String commandLineParams;
 
 	private SurfaceView mView;
 	private SurfaceHolder mSurfaceHolder;
 	private long mNativeHandle;
+	
+	private String dir;
 
 	// Main components
 	protected static GLES3JNIActivity mSingleton;
@@ -131,6 +105,8 @@ import java.util.Vector;
 		Log.v( TAG, "GLES3JNIActivity::onCreate()" );
 		super.onCreate( icicle );
 
+		dir = "/sdcard/BeefRaiderXR";//getBaseContext().getExternalFilesDir(null).getAbsolutePath();
+
 		GLES3JNIActivity.initialize();
 
 		// So we can call stuff from static callbacks
@@ -155,71 +131,47 @@ import java.util.Vector;
 
 	/** Initializes the Activity only if the permission has been granted. */
 	private void checkPermissionsAndInitialize() {
-		// Boilerplate for checking runtime permissions in Android.
-		if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-				!= PackageManager.PERMISSION_GRANTED){
-			ActivityCompat.requestPermissions(
-					GLES3JNIActivity.this,
-					new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
-					WRITE_EXTERNAL_STORAGE_PERMISSION_ID);
-		} else if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-				!= PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(
-                    GLES3JNIActivity.this,
-					new String[] {Manifest.permission.READ_EXTERNAL_STORAGE},
-					READ_EXTERNAL_STORAGE_PERMISSION_ID);
-        }
+		if (!Environment.isExternalStorageManager()) {
+			//request for the permission
+			Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+			Uri uri = Uri.fromParts("package", getPackageName(), null);
+			intent.setData(uri);
+			startActivityForResult(intent, 1);
+		}
 		else
 		{
-			permissionsGranted = true;
-		}
-
-		if (permissionsGranted) {
 			// Permissions have already been granted.
 			create();
 		}
 	}
 
-	/** Handles the user accepting the permission. */
 	@Override
-	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-		if (requestCode == READ_EXTERNAL_STORAGE_PERMISSION_ID) {
-			if (results.length > 0 && results[0] != PackageManager.PERMISSION_GRANTED) {
-				System.exit(0);
-			}
-		}
-
-		if (requestCode == WRITE_EXTERNAL_STORAGE_PERMISSION_ID) {
-			if (results.length > 0 && results[0] != PackageManager.PERMISSION_GRANTED) {
-				System.exit(0);
-			}
-		}
-
-		checkPermissionsAndInitialize();
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		create();
 	}
 
 	public void create() {
 		//Make the directories
-		new File("/sdcard/BeefRaiderXR/DATA").mkdirs();
+		new File(dir + "/DATA").mkdirs();
 
 		//Copy the command line params file
-		copy_asset("/sdcard/BeefRaiderXR", "commandline.txt", false);
+		copy_asset(dir, "commandline.txt", false);
 
 		//Credits images
-		copy_asset("/sdcard/BeefRaiderXR", "CREDITS1.PNG", true);
-		copy_asset("/sdcard/BeefRaiderXR", "CREDITS2.PNG", true);
+		copy_asset(dir, "CREDITS1.PNG", true);
+		copy_asset(dir, "CREDITS2.PNG", true);
 
-		if (!new File("/sdcard/BeefRaiderXR/nocopy").exists())
+		if (!new File(dir + "/nocopy").exists())
 		{
 			//Copy demo files
-			copy_asset("/sdcard/BeefRaiderXR/DATA", "LEVEL2.PHD", false);
+			copy_asset(dir + "/DATA", "LEVEL2.PHD", false);
 		}
 
 		try {
-			setenv("BRXR_DIR", "/sdcard/BeefRaiderXR", true);
+			setenv("BRXR_DIR", dir, true);
 		} catch (Exception ignored)
 		{
-			System.exit(-9);
+			System.exit(-9);;
 		}
 
 		//Read these from a file and pass through
@@ -227,7 +179,7 @@ import java.util.Vector;
 		boolean isDemo = false;
 
 		//If there's no level 1 file, then use the demo assets
-		if (!new File("/sdcard/BeefRaiderXR/DATA/LEVEL1.PHD").exists())
+		if (!new File(dir + "/DATA/LEVEL1.PHD").exists())
 		{
 			//The demo command line
 			commandLineParams = "LEVEL2.PHD";
@@ -235,11 +187,11 @@ import java.util.Vector;
 		}
 
 		//See if user is trying to use command line params
-		if (new File("/sdcard/BeefRaiderXR/commandline.txt").exists()) // should exist!
+		if (new File(dir + "/commandline.txt").exists()) // should exist!
 		{
 			BufferedReader br;
 			try {
-				br = new BufferedReader(new FileReader("/sdcard/BeefRaiderXR/commandline.txt"));
+				br = new BufferedReader(new FileReader(dir + "/commandline.txt"));
 				String s;
 				StringBuilder sb = new StringBuilder(0);
 				while ((s = br.readLine()) != null)
