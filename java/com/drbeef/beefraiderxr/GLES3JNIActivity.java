@@ -208,6 +208,7 @@ import java.util.Vector;
 		//Credits images
 		copy_asset("/sdcard/BeefRaiderXR", "CREDITS1.PNG", true);
 		copy_asset("/sdcard/BeefRaiderXR", "CREDITS2.PNG", true);
+		copy_asset("/sdcard/BeefRaiderXR/DATA", "TITLEH.PCX", true);
 
 		if (!new File("/sdcard/BeefRaiderXR/nocopy").exists())
 		{
